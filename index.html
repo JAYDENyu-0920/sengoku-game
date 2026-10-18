@@ -91,7 +91,7 @@ render();
 function log(s){g.logs.unshift(s);g.logs=g.logs.slice(0,30)}
 function selectCity(id){g.selected=id;save();render()}
 function own(){return g.cities.filter(c=>c.owner==="織田")}
-function command(type){
+function doDomesticAction(type){
 if(g.used||g.over)return;
 let c=g.cities[g.selected];
 if(c.owner!=="織田")return;
@@ -234,10 +234,10 @@ onclick="selectCity(${x.id})">
 ${c.owner==="織田"&&!g.over?`
 <h2>內政指令</h2>
 <div class="actions">
-<button onclick="command('farm')" ${g.used?"disabled":""}>開墾 300金</button>
-<button onclick="command('trade')" ${g.used?"disabled":""}>商業 350金</button>
-<button onclick="command('def')" ${g.used?"disabled":""}>築城 250金</button>
-<button onclick="command('recruit')" ${g.used?"disabled":""}>徵兵 400金</button>
+<button onclick="doDomesticAction('farm')" ${g.used?"disabled":""}>開墾 300金</button>
+<button onclick="doDomesticAction('trade')" ${g.used?"disabled":""}>商業 350金</button>
+<button onclick="doDomesticAction('def')" ${g.used?"disabled":""}>築城 250金</button>
+<button onclick="doDomesticAction('recruit')" ${g.used?"disabled":""}>徵兵 400金</button>
 </div>
 <h2 style="margin-top:18px">武將任命</h2>
 <select id="officers">
