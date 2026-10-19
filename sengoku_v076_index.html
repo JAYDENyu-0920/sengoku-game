@@ -1,0 +1,859 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>戰國群雄錄 V0.7.6</title><style>*{box-sizing:border-box}body{margin:0;background:#171e28;color:#f2e5c5;font-family:system-ui}header{text-align:center;background:#293447;padding:16px;border-bottom:3px solid #c6a268}h1{font-size:25px;color:#f6d28a;margin:0}small,.hint{color:#bcb9ae}main{max-width:560px;margin:auto;padding:12px}.panel{background:#283445;border:2px solid #647082;padding:13px;margin:12px 0;border-radius:5px}h2{font-size:18px;color:#f6d28a;margin:0 0 12px}.stats,.map,.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stats{grid-template-columns:repeat(3,1fr);position:sticky;top:0;z-index:100;background:#171e28;padding:8px 0 9px;margin:-8px 0 8px;box-shadow:0 6px 12px rgba(0,0,0,.4);border-bottom:1px solid #c6a268}.stats .stat{padding:8px 3px}.stats .stat b{font-variant-numeric:tabular-nums;font-size:clamp(14px,4vw,18px)}.stats .stat.low b{color:#ff8d81}.stat{text-align:center;background:#192533;padding:10px 3px;font-size:12px}.stat b{display:block;color:#f6d28a;font-size:18px}button,select{font:inherit}button{background:#725936;border:2px solid #c9a46b;color:#fff0d0;padding:11px 5px;border-radius:4px;cursor:pointer}button:disabled{opacity:.35}.castle{background:#26394b;min-height:75px}.castle.enemy{background:#563b48}.castle.active{outline:3px solid #f6d28a}.castle strong{display:block}.castle span{font-size:12px}.full{width:100%;margin-top:10px}.officer{background:#192533;padding:11px;margin:9px 0;border-left:4px solid #c9a46b}.officer b{color:#f6d28a}select{width:100%;padding:10px;background:#192533;color:white;border:1px solid #8893a0;margin:8px 0}.log{font-size:13px;line-height:1.8;max-height:220px;overflow:auto}.hint{font-size:12px}
+/* V0.7.4.1：僅資源列固定，地圖獨立全螢幕，不依捲動縮放 */
+.hud{position:sticky;top:0;z-index:110;background:#171e28;padding:3px 0 5px;box-shadow:0 6px 15px #0009}
+.hud .stats{position:static;top:auto;box-shadow:none;margin:0;padding:4px 0;border-bottom:0}
+.map-launch{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#253b3e;border:1px solid #aa9163;border-radius:6px;margin:10px 0;padding:10px 12px}
+.map-launch strong{color:#f6d28a;font-size:14px}
+.map-launch button{padding:9px 13px;white-space:nowrap}
+.map-dialog{position:fixed;inset:0;z-index:1000;background:#111b26;display:none;flex-direction:column;overflow:hidden}
+.map-dialog.open{display:flex}
+.map-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#293447;border-bottom:2px solid #b99d70}
+.map-dialog-header strong{color:#f6d28a;font-size:16px}
+.map-dialog-header button{padding:9px 15px}
+.map-dialog-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;overflow:auto}
+.map-dialog #mapCanvas{max-height:100%}.map-dialog .map-scene{display:block;width:100%;height:auto;max-width:900px;max-height:100%;aspect-ratio:600/420;touch-action:manipulation}
+.map-dialog-footer{padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#293447;border-top:1px solid #647082}
+.map-dialog-footer p{margin:0 0 7px;font-size:12px;color:#ddd3b9}
+.map-dialog-footer button{width:100%}
+body.map-open{overflow:hidden}
+.map-fab{position:fixed;right:calc(15px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:450;border-radius:999px;background:#876234;border:2px solid #f0ce87;box-shadow:0 5px 20px #0009;padding:13px 17px;font-weight:700;min-width:100px}
+body.map-open .map-fab{display:none}
+main{padding-bottom:80px}
+.war-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.war-options label{font-size:12px;color:#e8d8b2}
+.war-options select{margin:5px 0 8px}
+.war-preview{padding:10px;border:1px solid #647082;background:#1b2a38;border-radius:5px;font-size:12px;line-height:1.8}
+.war-report{background:#202d3b;border-left:3px solid #d9ad64;padding:10px;margin:10px 0;font-size:12px;line-height:1.65}
+.personnel-card{background:#192533;border:1px solid #536578;border-radius:5px;padding:10px;margin:8px 0}
+.personnel-card b{color:#f6d28a}.personnel-card p{font-size:12px;margin:5px 0;line-height:1.55}
+.personnel-chip{font-size:11px;color:#d8c69c}.personnel-list{max-height:370px;overflow:auto}
+.personnel-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.personnel-actions button{font-size:13px;padding:9px 4px}
+.personnel-subtitle{margin:14px 0 6px;color:#f6d28a;font-size:14px}
+
+.map-node{cursor:pointer;outline:none}
+.map-node .marker{stroke:#16212a;stroke-width:1.5}
+.map-node.selected .marker{stroke:#fff0aa;stroke-width:3}
+.map-node:focus .marker{stroke:#fff;stroke-width:3}
+.map-label{font:700 11px system-ui,sans-serif;paint-order:stroke;stroke:#17212d;stroke-width:3px;fill:#fff1d5}
+.map-troops{font:9px system-ui,sans-serif;paint-order:stroke;stroke:#17212d;stroke-width:2px;fill:#f4ead0}
+@media(max-width:390px){.map-label{font-size:11px}.map-troops{font-size:9px}}
+
+/* V0.7.4.1 戰國卷軸 UI — interface only; game data and mechanics preserved */
+:root{--ink:#121b20;--panel:#24313a;--gold:#d6ad67;--paper:#eee1c4;--line:#756448}
+body{background:radial-gradient(ellipse at top,#33423f 0%,#101a20 78%);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,'Noto Sans TC',system-ui,sans-serif}
+header{background:linear-gradient(105deg,#17272b,#35413a 48%,#19282e);border-bottom:2px solid var(--gold);padding:12px 10px 10px;box-shadow:0 5px 24px #0008}
+header h1{font-family:serif;font-size:24px;letter-spacing:3px;text-shadow:0 2px 5px #000}
+header small{color:#d9bd87;letter-spacing:2px}
+main{max-width:960px;padding:12px 12px 116px}
+.panel{background:linear-gradient(155deg,#2b393d,#202d33);border:1px solid #9a8256;border-radius:10px;box-shadow:0 6px 18px #0005;padding:15px}
+.panel h2{font-family:serif;color:#e7c37b;letter-spacing:1px;border-bottom:1px solid #877450;padding-bottom:9px}
+button{border-radius:8px;min-height:41px;touch-action:manipulation}
+button:active{transform:scale(.985)}
+select{min-height:43px;border-radius:7px}
+.hud{position:sticky;top:0;z-index:100;background:#142229f2;border:1px solid #5f604d;border-radius:10px;backdrop-filter:blur(12px);box-shadow:0 5px 15px #0007}
+.map-launch{display:none!important}
+.map-fab{bottom:calc(86px + env(safe-area-inset-bottom));right:12px;min-width:unset;padding:11px 14px;font-size:13px}
+.sengoku-hero{background:linear-gradient(125deg,#39453d,#202d35);border:1px solid #9b8051;border-radius:12px;overflow:hidden;margin:10px 0;box-shadow:0 10px 25px #0007}
+.sengoku-hero-top{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 7px;gap:8px}
+.sengoku-hero-top strong{font-family:serif;font-size:20px;color:#f1d38d}
+.sengoku-hero-top small{color:#e4d1a8;font-size:11px}
+.sengoku-hero-map{background:#274b57;overflow:hidden}
+.sengoku-hero-map .map-scene{display:block;width:100%;height:auto;max-height:390px}
+.sengoku-hero-map .map-node{cursor:pointer}
+.sengoku-hero-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:9px 12px;font-size:12px}
+.sengoku-hero-foot button{background:#866335;color:#fff0c8;white-space:nowrap}
+.ui-tabs{position:fixed;bottom:0;left:0;right:0;z-index:430;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;padding:8px 7px calc(8px + env(safe-area-inset-bottom));background:#15242bf5;border-top:2px solid #b58d50;box-shadow:0 -7px 20px #0009;backdrop-filter:blur(12px)}
+.ui-tabs button{font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:54px;padding:5px 0;background:#293840;color:#dfd3b6;border:1px solid #49585b;border-radius:8px}
+.ui-tabs button.active{background:#6b5234;color:#fff0c4;border-color:#e4bb76;box-shadow:inset 0 0 12px #b78c4d55}
+.ui-tabs .tab-icon{font-size:21px;line-height:1.1}
+.ui-screen[hidden]{display:none!important}
+.ui-screen{animation:screenFade .15s ease-out}
+@keyframes screenFade{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ui-city-summary{display:flex;align-items:center;gap:12px;padding:12px;background:linear-gradient(105deg,#514532,#2d3c3e);border:1px solid #9a8256;border-radius:10px;margin:10px 0}
+.ui-portrait{width:76px;height:86px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 45% 30%,#aa8554,#493c32 70%);border:2px solid #d6ad67;border-radius:6px;box-shadow:inset 0 0 20px #201a1a9c}
+.ui-portrait .crest{font-size:30px;line-height:1.2}.ui-portrait .portrait-name{font-size:11px;color:#fff1d3;margin-top:7px;font-weight:700}
+.ui-city-summary strong{font-family:serif;font-size:20px;color:#f2d28e}
+.ui-city-summary p{font-size:12px;line-height:1.7;margin:5px 0;color:#e2d6bb}
+.ui-screen-title{font-family:serif;color:#e9c47d;font-size:21px;margin:17px 3px 9px}
+.ui-screen .panel{margin:10px 0}
+.ui-screen .personnel-list{max-height:none}
+.ui-screen .officer{border-color:#8d744c}
+.ui-screen .actions{gap:8px}
+.ui-screen .actions button{font-size:13px}
+.ui-battle-overlay{position:fixed;inset:0;z-index:1100;background:#080f15db;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(8px)}
+.ui-battle-overlay[hidden]{display:none!important}
+.ui-battle-card{width:min(440px,100%);background:linear-gradient(145deg,#35413c,#1a2932);border:2px solid #d2ab6a;border-radius:14px;padding:20px;box-shadow:0 20px 70px #000b;text-align:center}
+.ui-battle-banner{font-family:serif;font-size:29px;letter-spacing:3px;color:#f3d58d;margin:10px 0}
+.ui-battle-sub{font-size:13px;color:#e5d5b8;line-height:1.9}
+.ui-battle-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0}
+.ui-battle-stat{padding:10px;background:#15252c;border:1px solid #65716c;border-radius:8px;font-size:12px}
+.ui-battle-stat b{display:block;font-size:19px;color:#f3d58d}
+.ui-battle-card button{width:100%;background:#87633c;color:#fff4d9}
+@media(min-width:720px){.sengoku-hero-map .map-scene{max-height:480px}.ui-tabs{left:50%;transform:translateX(-50%);max-width:760px;border-radius:12px 12px 0 0}}
+@media(max-width:370px){.ui-tabs button{font-size:10px}.ui-portrait{width:65px}}
+
+/* V0.7.4.1: information-first city and officer screens, optimized for iPhone */
+.ui-city-dashboard{margin:10px 0 14px;padding:14px;border:1px solid #b99a66;border-radius:12px;background:linear-gradient(145deg,#34413d,#1b2a32);box-shadow:0 7px 20px #0005}
+.ui-city-head{display:flex;gap:12px;align-items:center}.ui-city-head h2{margin:0;color:#f2d18b;font-size:22px;border:0;padding:0}.ui-city-head p{font-size:12px;line-height:1.7;margin:4px 0;color:#e3d7bd}
+.ui-city-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
+.ui-city-metric{padding:10px 4px;text-align:center;border:1px solid #52646a;border-radius:8px;background:#152630}
+.ui-city-metric span{display:block;font-size:10px;color:#c9b99a}.ui-city-metric b{display:block;font-size:16px;color:#f6d490;margin-top:4px;font-variant-numeric:tabular-nums}
+.ui-city-units{margin-top:10px;font-size:12px;line-height:1.8;color:#e7d7b8;border-top:1px solid #6c6957;padding-top:8px}
+.ui-quick-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.ui-quick-nav button{background:#4b503d;font-size:12px;padding:8px 4px}
+.ui-officer-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}
+.ui-officer-card{min-width:0;border:1px solid #796a50;border-radius:11px;overflow:hidden;background:linear-gradient(155deg,#34413f,#1b2b34);box-shadow:0 5px 15px #0004}
+.ui-officer-top{display:flex;align-items:center;gap:8px;padding:10px 9px 8px}
+.ui-officer-avatar{flex:0 0 55px;width:55px;height:67px;position:relative;overflow:hidden;border:1px solid #c6a367;border-radius:7px;background:radial-gradient(circle at 50% 20%,#997d58,#3c4b4c 65%,#1b252e)}
+.ui-officer-avatar:before{content:'';position:absolute;width:23px;height:26px;border-radius:46% 46% 40% 40%;background:#dfbf95;left:15px;top:17px;box-shadow:0 -8px 0 3px #252d30}
+.ui-officer-avatar:after{content:'';position:absolute;width:52px;height:39px;border-radius:50% 50% 0 0;background:linear-gradient(90deg,#334451,#746345,#334451);left:1px;top:49px;border-top:2px solid #d0ae77}
+.ui-officer-avatar .avatar-crest{position:absolute;z-index:2;right:1px;top:0;font-size:14px;color:#f5db96;text-shadow:0 1px 3px #000}
+.ui-officer-meta{min-width:0;flex:1}.ui-officer-meta b{display:block;font-size:14px;color:#f6d28a;overflow-wrap:anywhere}.ui-officer-meta span{font-size:10px;line-height:1.6;color:#ddc8a3;display:block}
+.ui-officer-skills{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 9px 8px}.ui-officer-skill{font-size:10px;color:#e9dfca}.ui-officer-skill .bar{height:5px;border-radius:4px;background:#12212b;margin-top:3px;overflow:hidden}.ui-officer-skill .bar i{display:block;height:100%;background:linear-gradient(90deg,#8e6b3c,#f0c677)}
+.ui-officer-footer{border-top:1px solid #58615b;padding:8px 9px;font-size:10px;line-height:1.5;color:#ddc8a3}
+.ui-gallery-toggle{width:100%;background:#344a4c;margin:5px 0 8px;font-size:12px}
+.ui-battle-phase{min-height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;animation:phaseIn .24s ease-out}
+.ui-battle-phase .phase-icon{font-size:48px}.ui-battle-phase h3{font-family:serif;font-size:25px;color:#f4d18a;margin:0}.ui-battle-phase p{font-size:13px;line-height:1.8;color:#e9ddc4;margin:0}
+.ui-battle-step{font-size:11px;color:#d7b879;letter-spacing:2px;margin:0 0 8px}.ui-battle-actions{display:flex;gap:8px;margin-top:13px}.ui-battle-actions button{flex:1}
+@keyframes phaseIn{from{opacity:.3;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:345px){.ui-officer-gallery{grid-template-columns:1fr}.ui-city-grid{gap:4px}.ui-city-metric b{font-size:14px}}
+@media(min-width:650px){.ui-officer-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V0.7.4.1: always-available turn control, stacked above the map shortcut */
+.turn-fab{position:fixed;right:12px;bottom:calc(145px + env(safe-area-inset-bottom));z-index:451;min-width:104px;padding:11px 13px;border-radius:999px;background:#78452e;border:2px solid #e4b774;color:#fff1d4;box-shadow:0 5px 20px #0009;font-size:13px;font-weight:700}
+.turn-fab:disabled{opacity:.45;filter:grayscale(1);cursor:not-allowed}
+body.map-open .turn-fab{display:none}
+body:has(.ui-battle-overlay:not([hidden])) .turn-fab{display:none}
+@media(max-width:370px){.turn-fab{padding:10px 11px;min-width:94px;font-size:12px}}
+.portrait-label{position:absolute;z-index:3;bottom:2px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:#f9e3b4;text-shadow:0 1px 3px #000;background:#172632a8}
+.trait-desc{display:block;color:#f2d595;margin-top:4px}
+.ui-officer-avatar:nth-child(1){box-shadow:inset 0 0 14px #9e8b5b}
+.war-art-trigger{margin:8px 0;padding:10px 12px;border:1px solid #b99a52;border-radius:9px;background:#59432255;color:#f7dd9a;text-align:left}
+.war-art-trigger b,.war-art-trigger span{display:block}
+.war-art-trigger span{font-size:12px;margin-top:4px}
+.war-art-none{margin:6px 0;font-size:12px;color:#aeb9c1}
+.ui-officer-avatar .portrait-art{width:100%;height:100%;display:block}
+.ui-officer-card{cursor:pointer}.ui-officer-card:focus-visible{outline:3px solid #f5d18a;outline-offset:2px}
+#officerBioDialog[hidden]{display:none!important}
+#officerBioDialog{position:fixed;inset:0;z-index:1200;background:#0b101bdc;overflow-y:auto;padding:22px 14px;display:flex;align-items:flex-start;justify-content:center}
+.bio-open{overflow:hidden}.bio-card{position:relative;background:#283445;color:#f2e5c5;border:2px solid #c9a46b;border-radius:13px;padding:18px;max-width:480px;width:100%;margin:auto}
+.bio-close{position:absolute;right:10px;top:10px;padding:6px 12px;z-index:2}
+.bio-hero{display:flex;gap:15px;align-items:center;padding-right:22px}
+.bio-hero>.portrait-art{width:110px;min-width:110px;height:138px;border:2px solid #bba16e;border-radius:8px}
+.bio-hero h2{font-size:24px;margin:7px 0}.bio-hero p{margin:5px 0;font-size:13px}
+.bio-abilities{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:18px 0}
+.bio-abilities span{background:#1b2834;border:1px solid #697582;padding:9px;text-align:center}
+.bio-card>p{line-height:1.8}
+
+/* V0.7.5 繪卷地圖：圖片背景＋動態勢力/兵力點選層 */
+.sengoku-hero-map{background:#ddbd83;overflow:auto;-webkit-overflow-scrolling:touch}
+.sengoku-hero-map .map-scene{min-width:600px;max-height:none!important;width:100%;height:auto}
+.map-dialog-body{justify-content:flex-start;align-items:flex-start;overflow:auto;-webkit-overflow-scrolling:touch}
+.map-dialog #mapCanvas{max-height:none!important;min-width:900px}
+.map-dialog .map-scene{min-width:900px;max-height:none!important;max-width:none!important;aspect-ratio:1536/1024}
+.map-node{cursor:pointer;touch-action:manipulation}
+
+.map-view-controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#293447;color:#f5e6bd}
+.map-view-controls button{flex:1;min-width:78px;border:1px solid #b9a27b;border-radius:7px;padding:7px 5px;background:#453b30;color:#fff3d8;font-size:12px}
+.map-view-controls button.active{background:#f0dba7;color:#312416;font-weight:bold}
+.map-guide{font-size:11px;line-height:1.45;color:#e9dcc4;padding:4px 9px;background:#293447}
+.map-dialog .map-view-controls{position:sticky;left:0;z-index:3}
+</style></head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.7.6 戰國勢力與領土</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
+<div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
+ <div class="map-dialog-header"><strong id="mapEra">戰略地圖</strong><button id="mapClose" type="button" onclick="closeMap()">✕ 關閉</button></div>
+ <div id="mapDialogControls"></div><div class="map-dialog-body"><div id="mapCanvas" style="width:100%;display:flex;align-items:center;justify-content:center"></div></div>
+ <div class="map-dialog-footer"><p id="mapSelection">請點選城池</p><button type="button" onclick="closeMap()">返回內政與軍事操作</button></div>
+</div><script>
+'use strict';
+const OFFICERS=[
+{id:1,n:'織田信長',f:'織田',c:92,w:85,i:91,p:96,t:'天下布武'},
+{id:2,n:'柴田勝家',f:'織田',c:88,w:94,i:65,p:58,t:'鬼柴田'},
+{id:3,n:'丹羽長秀',f:'織田',c:78,w:68,i:82,p:89,t:'米五郎左'},
+{id:4,n:'池田恆興',f:'織田',c:75,w:76,i:71,p:69,t:'忠義'},
+{id:5,n:'森可成',f:'織田',c:82,w:88,i:67,p:61,t:'攻勢'},
+{id:6,n:'佐久間信盛',f:'織田',c:76,w:69,i:70,p:73,t:'守備'},
+{id:7,n:'齋藤義龍',f:'齋藤',c:84,w:78,i:80,p:76,t:'美濃守護'},
+{id:8,n:'稻葉一鐵',f:'齋藤',c:81,w:82,i:75,p:71,t:'堅守'},
+{id:9,n:'安藤守就',f:'齋藤',c:77,w:70,i:80,p:76,t:'智將'},
+{id:10,n:'今川義元',f:'今川',c:85,w:65,i:87,p:93,t:'東海道一弓取'},
+{id:11,n:'松平元康',f:'今川',c:89,w:80,i:84,p:86,t:'三河武士'},
+{id:12,n:'朝比奈泰朝',f:'今川',c:80,w:77,i:72,p:70,t:'忠臣'} 
+,{id:13,n:'氏家卜全',f:'齋藤',c:76,w:73,i:72,p:74,t:'西美濃三人眾'}
+,{id:14,n:'酒井忠次',f:'今川',c:83,w:74,i:82,p:82,t:'三河宿老'}
+,{id:15,n:'石川數正',f:'今川',c:72,w:63,i:83,p:86,t:'交涉巧者'}
+,{id:16,n:'朝比奈泰能',f:'今川',c:74,w:67,i:73,p:77,t:'遠江守護'}
+,{id:17,n:'岡部元信',f:'今川',c:85,w:83,i:71,p:64,t:'勇將'}
+,{id:18,n:'菅沼定盈',f:'今川',c:73,w:76,i:74,p:66,t:'山城守備'}
+,{id:19,n:'羽柴秀吉',f:'織田',c:86,w:61,i:94,p:96,t:'築城名手'}
+,{id:20,n:'前田利家',f:'織田',c:83,w:91,i:69,p:76,t:'槍之又左'}
+,{id:21,n:'佐佐成政',f:'織田',c:79,w:85,i:67,p:66,t:'猛將'}
+,{id:22,n:'瀧川一益',f:'織田',c:86,w:81,i:86,p:77,t:'進退自在'}
+,{id:23,n:'蜂須賀正勝',f:'織田',c:76,w:75,i:84,p:79,t:'川並眾'}
+,{id:24,n:'齋藤龍興',f:'齋藤',c:48,w:45,i:43,p:41,t:'年少家督'}
+,{id:25,n:'竹中半兵衛',f:'齋藤',c:78,w:55,i:97,p:88,t:'今孔明'}
+,{id:26,n:'明智光秀',f:'齋藤',c:83,w:71,i:91,p:88,t:'才智'}
+,{id:27,n:'太原雪齋',f:'今川',c:75,w:45,i:96,p:94,t:'軍師'}
+,{id:28,n:'井伊直盛',f:'今川',c:75,w:76,i:71,p:67,t:'遠江武士'},
+{id:29,n:'山內一豐',f:'浪人',c:71,w:70,i:69,p:76,t:'忠節'},
+{id:30,n:'可兒才藏',f:'浪人',c:76,w:95,i:61,p:49,t:'笹之才藏'},
+{id:31,n:'藤堂高虎',f:'浪人',c:88,w:81,i:85,p:91,t:'築城巧者'},
+{id:32,n:'蒲生氏鄉',f:'浪人',c:87,w:85,i:84,p:88,t:'文武兩道'},
+{id:33,n:'黑田官兵衛',f:'浪人',c:86,w:55,i:98,p:92,t:'軍師'},
+{id:34,n:'細川藤孝',f:'浪人',c:76,w:67,i:92,p:91,t:'文武通達'},
+{id:35,n:'島左近',f:'浪人',c:92,w:91,i:85,p:69,t:'鬼左近'},
+{id:36,n:'本多正信',f:'浪人',c:64,w:40,i:93,p:95,t:'智謀'}];
+
+const OFFICER_BIOS={"1": "尾張織田氏出身，日後成為推動日本戰國勢力重組的重要人物。", "2": "柴田勝家為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "3": "丹羽長秀為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "4": "池田恆興為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "5": "森可成為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "6": "佐久間信盛為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "7": "齋藤義龍為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "8": "稻葉一鐵為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "9": "安藤守就為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "10": "駿河今川氏當主，致力於今川家的領國經營及東海道勢力擴張。", "11": "後來的德川家康。1546年仍是幼童，現行劇本登場方式尚待校正。", "12": "朝比奈泰朝為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "13": "氏家卜全為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "14": "酒井忠次為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "15": "石川數正為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "16": "朝比奈泰能為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "17": "岡部元信為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "18": "菅沼定盈為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "19": "後來的豐臣秀吉。1546年尚年少，現行劇本登場方式尚待校正。", "20": "前田利家為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "21": "佐佐成政為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "22": "瀧川一益為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "23": "蜂須賀正勝為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "24": "齋藤義龍之子，1546年尚未出生，現行劇本登場方式尚待校正。", "25": "美濃出身的軍師，1546年仍是幼童。", "26": "明智光秀為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "27": "今川家的僧侶軍師，對今川氏的政治與外交有深遠影響。", "28": "井伊直盛為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "29": "山內一豐為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "30": "可兒才藏為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "31": "藤堂高虎為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "32": "蒲生氏鄉為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "33": "後來成為豐臣秀吉的重要軍師，1546年仍為嬰兒。", "34": "細川藤孝為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "35": "島左近為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "36": "本多正信為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。", "0": "守城代官為本作登場的戰國人物。其生平、仕官年代及勢力關係將在歷史校正版本中進一步核對。"};
+function portraitSvg(o){
+ const id=o.id,skin=['#e3bc91','#d5a77b','#bd8e6c','#edc49b'][id%4],armor=['#405c63','#594d60','#725a40','#465a48','#634b47'][id%5],trim=['#c9a56c','#c7a8a1','#aebcb6'][id%3],hair=['#24292b','#38302d','#242d37'][id%3];
+ return `<svg class="portrait-art" viewBox="0 0 100 120" role="img" aria-label="${o.n}風格化示意肖像" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="120" fill="${trim}"/><path d="M0 120Q7 83 35 82H65Q93 83 100 120" fill="${armor}" stroke="#c9a56c" stroke-width="2"/><path d="M30 43Q27 17 50 17Q74 17 70 43L68 66Q60 83 50 83Q39 83 32 66Z" fill="${skin}"/><path d="M27 48Q18 16 50 13Q83 16 73 48L65 35Q50 28 34 38Z" fill="${hair}"/>${id%3===0?`<path d="M17 35Q25 5 50 7Q77 5 83 35L70 31Q50 21 30 31Z" fill="${armor}" stroke="${trim}" stroke-width="3"/>`:''}<path d="M36 44l10 -1M55 43l10 1" stroke="${hair}" stroke-width="2"/><path d="M49 49l-2 13h6" fill="none" stroke="#996f57"/><path d="M43 69Q50 ${69+id%3} 57 69" fill="none" stroke="#775448" stroke-width="1.5"/>${id%4===0?'<path d="M41 73Q50 86 59 73" fill="none" stroke="#3b2b28" stroke-width="3"/>':''}<path d="M35 87L50 108 65 87" fill="#d6c5ad"/><path d="M10 107L25 92M90 107L75 92" stroke="${trim}" stroke-width="3"/></svg>`;
+}
+function showOfficerBio(id){
+ const o=OFFICERS.find(x=>x.id===id);if(!o)return;
+ const faction=g.personnel[id]?.faction||o.f;
+ const d=document.getElementById('officerBioDialog');
+ d.innerHTML=`<div class="bio-card"><button type="button" class="bio-close" onclick="closeOfficerBio()" aria-label="關閉人物列傳">✕</button><div class="bio-hero">${portraitSvg(o)}<div><small>戰國人物列傳 · 第 ${String(id).padStart(2,'0')} 號</small><h2>${o.n}</h2><p>${faction}家</p><p>固有特性：${o.t}</p></div></div><div class="bio-abilities"><span>統率 ${o.c}</span><span>武勇 ${o.w}</span><span>智略 ${o.i}</span><span>政務 ${o.p}</span></div><p><b>⚔ 專屬戰法</b><br>${WAR_ARTS[id]?.name||'尚未習得'}</p><p><b>📜 人物簡介</b><br>${OFFICER_BIOS[id]||'人物史料待補充。'}</p><p class="hint">肖像為原創風格化示意，非史實容貌復原；家紋待史料核對後才會加入。現有登場年代與勢力配置尚待歷史校正。</p><button class="full" onclick="closeOfficerBio()">返回武將管理</button></div>`;
+ d.hidden=false;document.body.classList.add('bio-open');
+}
+function closeOfficerBio(){document.getElementById('officerBioDialog').hidden=true;document.body.classList.remove('bio-open')}
+
+
+const HISTORICAL_ARRIVALS={
+ 1:1550,2:1546,3:1550,4:1552,5:1549,6:1546,7:1546,8:1546,9:1546,
+ 10:1546,11:1560,12:1550,13:1546,14:1555,15:1560,16:1546,17:1550,18:1560,
+ 19:1554,20:1553,21:1555,22:1555,23:1555,24:1563,25:1559,26:1556,27:1546,28:1546,
+ 29:1560,30:1570,31:1575,32:1574,33:1565,34:1555,35:1560,36:1560
+};
+function currentScenarioYear(){return (g.startYear||1546)+Math.floor((g.turn-1)/4)}
+function isHistoricalScenario(){return g.scenarioVersion==='tenbun1546'}
+function officerAvailable(id){return !isHistoricalScenario()||currentScenarioYear()>=(HISTORICAL_ARRIVALS[id]||1546)}
+function scenarioArrival(){
+ if(!isHistoricalScenario())return;
+ const year=currentScenarioYear();
+ for(const o of OFFICERS){
+  const p=g.personnel[o.id];
+  if(!p||p.faction!=='未登場'||year<(HISTORICAL_ARRIVALS[o.id]||1546))continue;
+  p.faction='浪人';p.loyalty=0;
+  log(`📜 ${year}年：${o.n}進入可登用武將名單`);
+ }
+ if(year===1549)log('📜 1549年：松平氏與今川氏的關係逐步改變（三河情勢事件提示）。');
+ if(year===1560)log('📜 1560年：桶狹間之戰的歷史年份已至；本作尚未強制改寫玩家戰局。');
+}
+
+// V0.7.5：依新繪卷的十五城配置；索引即城池 ID。
+const BASE=[
+ ['清洲','織田',2500,65,1],['犬山','織田',1300,50,2],['稻葉山','齋藤',2300,75,7],
+ ['岡崎','今川',2100,65,11],['吉田','今川',1400,50,12],['那古野','織田',1100,48,4]
+];
+const EXTRA_BASE=[
+ ['鳴海','織田',900,42,5],['墨俣','齋藤',1000,46,9],['大垣','齋藤',1400,57,13],
+ ['桑名','織田',950,49,14],['安濃津','織田',950,46,15],['鳥羽','織田',1000,52,16],
+ ['長篠','今川',950,57,18],['二俣','今川',950,55,17],['濱松','今川',1600,58,19]
+];
+const ALL_BASE=BASE.concat(EXTRA_BASE);
+const ROADS=[[0,1],[0,5],[0,6],[0,7],[0,9],[1,2],[1,5],[1,7],[2,7],[2,8],
+ [3,4],[3,6],[3,12],[4,12],[4,14],[5,6],[5,7],[7,8],[9,10],[10,11],
+ [12,13],[13,14]],KEY='sengoku_v02_save';let g;
+const officer=id=>OFFICERS.find(o=>o.id===id)||{id:0,n:'守城代官',f:'中立',c:50,w:50,i:50,p:50,t:'守備'};
+const nearby=id=>ROADS.filter(r=>r.includes(id)).map(r=>r[0]===id?r[1]:r[0]);
+const owned=()=>g.cities.filter(c=>c.owner==='織田');
+const FACTIONS=['織田','齋藤','今川'];
+const pair=(a,b)=>[a,b].sort().join('|');
+function diplomacyDefaults(){return {relations:{[pair('織田','齋藤')]:-35,[pair('織田','今川')]:-45,[pair('齋藤','今川')]:5},alliances:{},truces:{},credit:100}}
+function relation(a,b){return g.diplomacy.relations[pair(a,b)]??0}
+function setRelation(a,b,v){g.diplomacy.relations[pair(a,b)]=Math.max(-100,Math.min(100,Math.round(v)))}
+function active(t,a,b){return (g.diplomacy[t][pair(a,b)]||0)>g.turn}
+function peaceful(a,b){return active('alliances',a,b)||active('truces',a,b)}
+function fresh(){return{scenarioVersion:'tenbun1546',mapVersion:'v075',startYear:1546,turn:1,gold:3000,rice:8000,selected:0,used:false,over:false,cities:ALL_BASE.map((x,id)=>({id,name:x[0],owner:x[1],troops:x[2],def:x[3],officer:(1546>=(HISTORICAL_ARRIVALS[x[4]]||1546)?x[4]:0),farm:1,trade:1,units:{foot:x[2],horse:0,gun:0},morale:75,siege:0})),war:{},logs:['天文十五年（1546），戰國風雲再起。','V0.7.6史實試行：未達出仕年代者暫不登場；勢力與地圖仍為簡化版本。'],reserve:[],aiSupply:{'齋藤':2000,'今川':2000},diplomacy:diplomacyDefaults(),personnel:Object.fromEntries(OFFICERS.map(o=>[o.id,{faction:1546<(HISTORICAL_ARRIVALS[o.id]||1546)?'未登場':o.f,loyalty:o.f==='浪人'?0:Math.min(95,65+Math.floor(o.p/5)),xp:0}])),uiSelections:{}}}
+function normalize(){if(!g||!Array.isArray(g.cities)||g.cities.length<6){g=fresh();return}
+if(g.mapVersion!=='v075'){
+ const old=g.cities.slice(),oldSelected=old[g.selected]?.name;
+ const norm=n=>String(n||'').replace(/城$/,'').replace('岐阜','稻葉山').replace('浜松','濱松').replace('安濃津','安濃津');
+ const used=new Set();
+ g.cities=ALL_BASE.map((entry,id)=>{
+  const ix=old.findIndex((c,i)=>!used.has(i)&&norm(c.name)===norm(entry[0]));
+  if(ix>=0){used.add(ix);return {...old[ix],id,name:entry[0]};}
+  return {id,name:entry[0],owner:entry[1],troops:entry[2],def:entry[3],officer:0,farm:1,trade:1,units:{foot:entry[2],horse:0,gun:0},morale:75,siege:0};
+ });
+ g.retiredCityArchive=(g.retiredCityArchive||[]).concat(old.filter((c,i)=>!used.has(i)));
+ g.selected=Math.max(0,g.cities.findIndex(c=>norm(c.name)===norm(oldSelected)));
+ g.mapVersion='v075';
+ g.logs=Array.isArray(g.logs)?g.logs:[];
+ g.logs.unshift('V0.7.5：繪卷十五城地圖已更新；原有同名城池保留資料，退出地圖的舊城已封存於存檔。');
+}
+if(!Number.isInteger(g.startYear))g.startYear=1560;
+// 史實地名遷移：只更新城名，不改變城池 ID、所有權或任何進度。
+if(g.cities[2]&&['岐阜','岐阜城','稻葉山城'].includes(g.cities[2].name))g.cities[2].name='稻葉山';
+if(g.cities.length<ALL_BASE.length){
+ const originalCount=g.cities.length;
+ for(let id=originalCount;id<ALL_BASE.length;id++){
+  const x=ALL_BASE[id];
+  g.cities.push({id,name:x[0],owner:x[1],troops:x[2],def:x[3],officer:x[4],farm:1,trade:1});
+ }
+ g.logs=Array.isArray(g.logs)?g.logs:[];
+ g.logs.unshift('V0.7.4.1：戰略版圖擴充至十五城；原有六城進度完整保留。');
+ if(g.over&&g.cities.slice(0,6).every(c=>c.owner==='織田'))g.over=false;
+}if(!g.diplomacy||typeof g.diplomacy!=='object')g.diplomacy=diplomacyDefaults();let defaults=diplomacyDefaults();for(const k of ['relations','alliances','truces'])if(!g.diplomacy[k]||typeof g.diplomacy[k]!=='object')g.diplomacy[k]=defaults[k];for(const [k,v] of Object.entries(defaults.relations))if(!Number.isFinite(g.diplomacy.relations[k]))g.diplomacy.relations[k]=v;if(!Number.isFinite(g.diplomacy.credit))g.diplomacy.credit=100;g.logs=Array.isArray(g.logs)?g.logs:[];g.reserve=Array.isArray(g.reserve)?g.reserve:[];g.aiSupply=g.aiSupply||{'齋藤':2000,'今川':2000};g.uiSelections=g.uiSelections&&typeof g.uiSelections==='object'?g.uiSelections:{};g.selected=Number.isInteger(g.selected)&&g.selected>=0&&g.selected<g.cities.length?g.selected:0;let seen=new Set();for(const c of g.cities){if(!OFFICERS.some(o=>o.id===c.officer)||seen.has(c.officer))c.officer=0;if(c.officer)seen.add(c.officer);c.troops=Math.max(0,Number(c.troops)||0)}g.reserve=[...new Set(g.reserve)].filter(id=>OFFICERS.some(o=>o.id===id)&&!seen.has(id));
+if(!g.personnel||typeof g.personnel!=='object')g.personnel={};
+for(const o of OFFICERS){let k=String(o.id),entry=g.personnel[k];if(!entry||typeof entry!=='object'){
+ let city=g.cities.find(c=>c.officer===o.id),f=city?city.owner:g.reserve.includes(o.id)?'織田':o.f;
+ entry={faction:f==='浪人'?'浪人':f,loyalty:f==='浪人'?0:Math.min(95,65+Math.floor(o.p/5)),xp:0};g.personnel[k]=entry;
+}
+if(!['織田','齋藤','今川','浪人','未登場'].includes(entry.faction))entry.faction=o.f;
+entry.loyalty=Math.max(0,Math.min(100,Number(entry.loyalty)||0));entry.xp=Math.max(0,Number(entry.xp)||0);
+}
+for(const c of g.cities){if(c.officer){g.personnel[c.officer].faction=c.owner}}
+for(const id of g.reserve){if(g.personnel[id])g.personnel[id].faction='織田'}
+if(!g.war||typeof g.war!=='object')g.war={};
+for(const c of g.cities){
+ if(!c.units||typeof c.units!=='object'){
+  c.units={foot:Math.max(0,Math.round(c.troops)),horse:0,gun:0};
+ }
+ for(const k of ['foot','horse','gun'])c.units[k]=Math.max(0,Math.floor(Number(c.units[k])||0));
+ c.troops=unitTotal(c.units);
+ c.morale=Math.max(20,Math.min(100,Number.isFinite(Number(c.morale))?Number(c.morale):75));
+ c.siege=Math.max(0,Math.min(100,Number(c.siege)||0));
+}
+
+}
+function selectedTarget(id){
+ const el=document.getElementById(id);
+ if(!el)return;
+ if(!g.uiSelections||typeof g.uiSelections!=='object')g.uiSelections={};
+ g.uiSelections[id]=el.value;
+ save();
+}
+function optionSelected(id,value){
+ return g.uiSelections&&String(g.uiSelections[id])===String(value)?' selected':'';
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(g))}catch(e){}}
+function load(){try{g=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){g=fresh()}normalize();save();render()}
+function log(s){g.logs.unshift(s);g.logs=g.logs.slice(0,35)}
+function selectCity(id){g.selected=id;save();render()}
+function ready(){if(g.over){alert('遊戲已結束');return false}return true}
+function doDomesticAction(type){if(!ready())return;let c=g.cities[g.selected];if(c.owner!=='織田')return alert('只能管理織田家城池');let bonus=1+Math.max(0,officer(c.officer).p-60)/200+(c.officer?Math.max(0,loyaltyOf(c.officer)-60)/500:0);if(type==='farm'){if(g.gold<300)return alert('金錢不足');g.gold-=300;c.farm++;log(c.name+'開墾農田')}else if(type==='trade'){if(g.gold<350)return alert('金錢不足');g.gold-=350;c.trade++;log(c.name+'發展商業')}else if(type==='def'){if(c.def>=100)return alert('城防已達上限');if(g.gold<250)return alert('金錢不足');g.gold-=250;c.def=Math.min(100,c.def+12*bonus);log(c.name+'修築城防')}else if(type==='recruit'){if(g.gold<400||g.rice<300)return alert('資源不足');g.gold-=400;g.rice-=300;const qty=Math.round(500*bonus);c.units.foot+=qty;c.troops=unitTotal(c.units);log(c.name+'徵募足輕')}else return;save();render()}
+function factionOf(id){return g.personnel[id]?.faction||officer(id).f}
+function loyaltyOf(id){return g.personnel[id]?.loyalty??70}
+function setPersonnelChoice(id){selectedTarget(id)}
+function rewardOfficer(){
+ if(!ready())return;let el=document.getElementById('rewardOfficer');if(!el||!el.value)return alert('請先選擇家臣');
+ let id=Number(el.value);selectedTarget('rewardOfficer');if(factionOf(id)!=='織田')return alert('只能賞賜本家家臣');
+ if(g.gold<200)return alert('軍資金不足，需要200金');
+ if(loyaltyOf(id)>=100)return alert('忠誠度已達100');
+ g.gold-=200;g.personnel[id].loyalty=Math.min(100,loyaltyOf(id)+12);g.personnel[id].xp+=2;
+ log('賞賜'+officer(id).n+'200金，忠誠提升至'+loyaltyOf(id));save();render();
+}
+function recruitOfficer(){
+ if(!ready())return;let el=document.getElementById('recruitOfficer');if(!el||!el.value)return alert('目前沒有可登用的浪人');
+ let id=Number(el.value);selectedTarget('recruitOfficer');if(factionOf(id)!=='浪人'||!officerAvailable(id))return alert('此武將尚未到達可登用年代');
+ if(g.gold<500)return alert('登用需要500金');
+ g.gold-=500;
+ const o=officer(id),political=officer(g.cities[g.selected].officer).p;
+ const chance=Math.min(.86,Math.max(.25,.42+(political-65)/300+(o.p<70?.10:0)-(o.p>90?.09:0)));
+ if(Math.random()<chance){g.personnel[id].faction='織田';g.personnel[id].loyalty=65+Math.floor(Math.random()*16);g.personnel[id].xp+=4;
+  if(!g.reserve.includes(id))g.reserve.push(id);log('成功登用'+o.n+'！忠誠度'+loyaltyOf(id));
+ }else log('登用'+o.n+'失敗，花費500金');save();render();
+}
+function personnelPanel(){
+ const ours=OFFICERS.filter(o=>factionOf(o.id)==='織田'&&officerAvailable(o.id)),ronin=OFFICERS.filter(o=>factionOf(o.id)==='浪人'&&officerAvailable(o.id));
+ const options=ours.map(o=>`<option value="${o.id}"${optionSelected('rewardOfficer',o.id)}>${o.n}｜忠誠${loyaltyOf(o.id)}</option>`).join('');
+ const roninOpts=ronin.map(o=>`<option value="${o.id}"${optionSelected('recruitOfficer',o.id)}>${o.n}｜智略${o.i} 政治${o.p}</option>`).join('');
+ const cards=ours.map(o=>{const city=g.cities.find(c=>c.officer===o.id),loc=city?city.name+'城主':'待命家臣',loyal=loyaltyOf(o.id);
+ const skills=[['統率',o.c],['武勇',o.w],['智略',o.i],['政治',o.p]].map(([name,value])=>`<div class="ui-officer-skill">${name} <b>${value}</b><div class="bar"><i style="width:${Math.max(0,Math.min(100,value))}%"></i></div></div>`).join('');
+ return `<article class="ui-officer-card" role="button" tabindex="0" aria-label="查看${o.n}人物列傳" onclick="showOfficerBio(${o.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showOfficerBio(${o.id})}"><div class="ui-officer-top"><div class="ui-officer-avatar" aria-label="${o.n}示意肖像">${portraitSvg(o)}</div><div class="ui-officer-meta"><b>${o.n}</b><span>${loc}</span><span>忠誠 ${loyal}/100 · 經驗 ${g.personnel[o.id]?.xp||0}</span></div></div><div class="ui-officer-skills">${skills}</div><div class="ui-officer-footer">⚔ ${o.t}<br><span class="trait-desc">${traitInfo(o).desc}</span><span class='trait-desc'>戰法：${WAR_ARTS[o.id]?.name||'尚未習得'}</span></div></article>`;
+ }).join('');
+ return `<section class="panel"><h2>👥 家臣團與武將管理</h2><p class="hint">標準模式：登用消耗500金、賞賜消耗200金；城主每城最多一名。低忠誠度家臣可能離去。</p><p class="personnel-subtitle">本家家臣（${ours.length}名）</p><div class="ui-officer-gallery">${cards||'<p>暫無家臣</p>'}</div>${!g.over?`<p class="personnel-subtitle">🎁 賞賜家臣</p>${ours.length?`<select id="rewardOfficer" onchange="setPersonnelChoice('rewardOfficer')">${options}</select><button class="full" onclick="rewardOfficer()">賞賜 200金（忠誠 +12）</button>`:'<p>沒有可賞賜的家臣</p>'}<p class="personnel-subtitle">📜 招募浪人（${ronin.length}名）</p>${ronin.length?`<select id="recruitOfficer" onchange="setPersonnelChoice('recruitOfficer')">${roninOpts}</select><button class="full" onclick="recruitOfficer()">嘗試登用 500金</button>`:'<p>目前沒有可登用的浪人</p>'}`:''}</section>`;
+}
+function personnelTurn(){
+ for(const o of OFFICERS){const p=g.personnel[o.id];if(!p||p.faction==='浪人'||p.faction==='未登場')continue;
+  const isCity=g.cities.some(c=>c.officer===o.id);
+  if(p.faction==='織田'){
+   p.xp+=(isCity?3:1);
+   if(p.loyalty<28&&Math.random()<.12){p.faction='浪人';p.loyalty=0;g.reserve=g.reserve.filter(id=>id!==o.id);
+    for(const c of g.cities)if(c.officer===o.id)c.officer=0;
+    log(o.n+'因忠誠不足離開織田家');
+   }
+  }else if(p.loyalty<40)p.loyalty=Math.min(85,p.loyalty+2);
+ }
+ // Opponents occasionally recruit one wandering officer; no frequent player-poaching.
+ if(Math.random()<.13){let available=OFFICERS.filter(o=>factionOf(o.id)==='浪人'&&officerAvailable(o.id));let factions=['齋藤','今川'].filter(f=>g.cities.some(c=>c.owner===f));
+  if(available.length&&factions.length){let o=available[Math.floor(Math.random()*available.length)],f=factions[Math.floor(Math.random()*factions.length)];
+   g.personnel[o.id].faction=f;g.personnel[o.id].loyalty=66;log(f+'家登用浪人'+o.n);
+  }
+ }
+}
+function appoint(){
+ if(!ready())return;
+ const c=g.cities[g.selected];if(c.owner!=='織田')return alert('只能任命本家城池');
+ const el=document.getElementById('officers');if(!el||!el.value)return alert('沒有可任命的家臣');
+ const id=Number(el.value),o=officer(id);
+ if(factionOf(id)!=='織田')return alert('這名武將不屬於本家');
+ if(c.officer===id)return alert(o.n+'已是本城城主');
+ const former=g.cities.find(x=>x.officer===id&&x.id!==c.id);
+ const replaced=c.officer;
+ let msg='確定任命'+o.n+'為'+c.name+'城主？';
+ if(former)msg+='\n將解除其在'+former.name+'的城主職務。';
+ if(replaced)msg+='\n原城主'+officer(replaced).n+'將改為待命家臣。';
+ if(!confirm(msg))return;
+ if(former)former.officer=0;
+ if(replaced&&!g.reserve.includes(replaced))g.reserve.push(replaced);
+ c.officer=id;g.reserve=g.reserve.filter(x=>x!==id);
+ g.personnel[id].xp+=3;
+ log(o.n+(former?'由'+former.name+'調任':'就任')+c.name+'城主'+(replaced?'；'+officer(replaced).n+'卸任':''));
+ save();render();
+}
+function dismissCastellan(){
+ if(!ready())return;
+ const c=g.cities[g.selected];if(c.owner!=='織田'||!c.officer)return alert('本城目前沒有可解除任命的城主');
+ const id=c.officer;if(!confirm('解除'+officer(id).n+'的'+c.name+'城主職務？\n武將會留在本家家臣團。'))return;
+ c.officer=0;if(!g.reserve.includes(id))g.reserve.push(id);
+ log(officer(id).n+'卸任'+c.name+'城主，轉為待命家臣');save();render();
+}
+function swapCastellans(){
+ if(!ready())return;
+ const a=g.cities[g.selected];if(a.owner!=='織田'||!a.officer)return alert('本城必須有城主才能交換');
+ const el=document.getElementById('swapCity');if(!el||!el.value)return alert('請選擇交換的城池');
+ const b=g.cities[Number(el.value)];if(!b||b.owner!=='織田'||!b.officer||a.id===b.id)return alert('目標必須是另一座已有城主的本家城池');
+ if(!confirm('確定交換'+a.name+'的'+officer(a.officer).n+'與'+b.name+'的'+officer(b.officer).n+'？'))return;
+ const old=a.officer;a.officer=b.officer;b.officer=old;
+ log(a.name+'與'+b.name+'交換城主：'+officer(a.officer).n+'、'+officer(b.officer).n);save();render();
+}
+const UNIT_INFO={
+ foot:{name:'足輕',power:1,defense:1.05,cost:400,rice:300,number:500},
+ horse:{name:'騎馬隊',power:1.65,defense:1.05,cost:700,rice:450,number:240},
+ gun:{name:'鐵砲隊',power:1.9,defense:.8,cost:900,rice:600,number:180}
+};
+const TACTICS={
+ balanced:{name:'正面進軍',attack:1,defense:1,loss:1,wall:1,skill:0},
+ assault:{name:'強攻',attack:1.28,defense:.88,loss:1.25,wall:1.25,skill:0},
+ siege:{name:'包圍',attack:.86,defense:1.08,loss:.70,wall:2.2,skill:0},
+ surprise:{name:'奇襲',attack:1.05,defense:.93,loss:.90,wall:1.1,skill:1}
+};
+function unitTotal(u){return ['foot','horse','gun'].reduce((n,k)=>n+(Math.max(0,Number(u?.[k])||0)),0)}
+const COUNTER={foot:'horse',horse:'gun',gun:'foot'};
+const UNIT_NAMES={foot:'足輕',horse:'騎馬',gun:'鐵砲'};
+const TRAIT_EFFECTS={
+ '天下布武':{attack:1.09,surprise:1.12,trade:1.08,desc:'攻擊＋9%、奇襲＋12%、商業＋8%'},
+ '鬼柴田':{attack:1.13,desc:'進攻戰力＋13%'},
+ '米五郎左':{farm:1.10,defense:1.04,desc:'農業＋10%、守城＋4%'},
+ '忠義':{defense:1.06,desc:'守城＋6%'},
+ '攻勢':{attack:1.09,desc:'進攻＋9%'},
+ '守備':{defense:1.10,desc:'守城＋10%'},
+ '美濃守護':{defense:1.09,attack:1.04,desc:'守城＋9%、進攻＋4%'},
+ '堅守':{defense:1.15,desc:'守城＋15%'},
+ '智將':{surprise:1.10,desc:'奇襲＋10%'},
+ '東海道一弓取':{attack:1.08,trade:1.10,desc:'進攻＋8%、商業＋10%'},
+ '三河武士':{defense:1.10,desc:'守城＋10%'},
+ '忠臣':{defense:1.07,desc:'守城＋7%'},
+ '西美濃三人眾':{defense:1.08,desc:'守城＋8%'},
+ '三河宿老':{defense:1.08,farm:1.04,desc:'守城＋8%、農業＋4%'},
+ '交涉巧者':{trade:1.12,desc:'商業＋12%'},
+ '遠江守護':{farm:1.10,desc:'農業＋10%'},
+ '勇將':{attack:1.10,desc:'進攻＋10%'},
+ '山城守備':{defense:1.15,desc:'守城＋15%'},
+ '築城名手':{defense:1.12,trade:1.06,desc:'守城＋12%、商業＋6%'},
+ '槍之又左':{foot:1.18,desc:'足輕戰力＋18%'},
+ '猛將':{attack:1.10,desc:'進攻＋10%'},
+ '進退自在':{surprise:1.16,desc:'奇襲＋16%'},
+ '川並眾':{surprise:1.09,desc:'奇襲＋9%'},
+ '年少家督':{defense:1.02,desc:'守城＋2%'},
+ '今孔明':{siege:1.20,desc:'包圍戰力＋20%'},
+ '才智':{surprise:1.12,desc:'奇襲＋12%'},
+ '軍師':{siege:1.20,desc:'包圍戰力＋20%'},
+ '遠江武士':{defense:1.08,desc:'守城＋8%'},
+ '忠節':{defense:1.06,desc:'守城＋6%'},
+ '笹之才藏':{foot:1.18,desc:'足輕戰力＋18%'},
+ '築城巧者':{defense:1.12,desc:'守城＋12%'},
+ '文武兩道':{attack:1.06,trade:1.06,desc:'進攻＋6%、商業＋6%'},
+ '文武通達':{farm:1.07,trade:1.07,desc:'農業與商業＋7%'},
+ '鬼左近':{attack:1.12,desc:'進攻＋12%'},
+ '智謀':{surprise:1.12,desc:'奇襲＋12%'}
+};
+function traitInfo(o){return TRAIT_EFFECTS[o.t]||{desc:'以武將能力參與戰鬥'}}
+const WAR_ARTS={1:{name:'疾風奇襲',tactic:'surprise',power:1.17},2:{name:'鬼柴田突擊',tactic:'assault',power:1.18},3:{name:'米五郎左之備',tactic:'balanced',power:1.12},7:{name:'美濃鐵壁',tactic:'balanced',power:1.16},8:{name:'不動堅守',tactic:'siege',power:1.15},9:{name:'機略擾亂',tactic:'surprise',power:1.1},10:{name:'海道進軍',tactic:'balanced',power:1.12},12:{name:'駿河奮戰',tactic:'assault',power:1.12},17:{name:'勇猛先鋒',tactic:'assault',power:1.15},19:{name:'巧妙攻城',tactic:'siege',power:1.16},20:{name:'槍陣突破',tactic:'assault',power:1.14},22:{name:'進退自在',tactic:'surprise',power:1.15},25:{name:'十面埋伏',tactic:'surprise',power:1.17},26:{name:'智略攻勢',tactic:'siege',power:1.15},27:{name:'雪齋軍略',tactic:'balanced',power:1.13},33:{name:'軍師奇策',tactic:'surprise',power:1.16}};
+function warArt(o,tactic,turn,preview=false){
+ const art=WAR_ARTS[o.id];if(!art)return null;
+ const born={1:1534,19:1537,20:1538,25:1544,33:1546};
+ const year=(g.startYear||1546)+Math.floor((turn-1)/4);
+ if(born[o.id]&&year-born[o.id]<15)return null;
+ const chance=Math.min(.75,.28+(o.i-70)*.0015+(art.tactic===tactic?.10:0));
+ return preview?{...art,chance}:Math.random()<chance?{...art,chance}:null;
+}
+function armyPower(u,attacking=true,enemyUnits=null){
+ let total=0;
+ for(const k of ['foot','horse','gun']){
+  const base={foot:1,horse:1.65,gun:1.9}[k]*(attacking?1:{foot:1.05,horse:1.05,gun:.8}[k]);
+  const enemy=enemyUnits?unitTotal(enemyUnits):0;
+  const target=enemy?Math.max(0,enemyUnits[COUNTER[k]]||0)/enemy:0;
+  // Counter bonus: up to +30% when the opponent relies entirely on the vulnerable unit.
+  total+=Math.max(0,u[k]||0)*base*(1+.30*target);
+ }
+ return total;
+}
+function allocatedArmy(city,n){
+ n=Math.min(Math.max(0,Math.floor(n)),city.troops);
+ const send={},ratio=city.troops?n/city.troops:0;
+ for(const k of ['foot','horse','gun'])send[k]=Math.floor(city.units[k]*ratio);
+ let remaining=n-unitTotal(send);
+ for(const k of ['foot','horse','gun']){
+  const extra=Math.min(city.units[k]-send[k],remaining);
+  send[k]+=extra;remaining-=extra;
+ }
+ return send;
+}
+function battleEstimate(a,b,n,config={}){
+ const x=g.cities[a],y=g.cities[b],tactic=TACTICS[config.tactic]||TACTICS.balanced;
+ const commander=officerForBattle(x,config.commander),defender=officer(y.officer);
+ const send=allocatedArmy(x,n),defenseUnits=y.units;
+ const am=.70+x.morale/250,dm=.70+y.morale/250;
+ const surprise=config.tactic==='surprise'?Math.max(.75,Math.min(1.45,.65+commander.i/130+(commander.i-defender.i)/240)):1;
+ const atkTrait=traitInfo(commander),defTrait=traitInfo(defender);
+ const traitAttack=(atkTrait.attack||1)*(config.tactic==='surprise'?(atkTrait.surprise||1):1)*(config.tactic==='siege'?(atkTrait.siege||1):1);
+ const traitDefense=defTrait.defense||1;
+ const atk=armyPower(send,true,defenseUnits)*(.74+commander.c/240+commander.w/650)*tactic.attack*surprise*am*traitAttack*(config.commander&&loyaltyOf(config.commander)>=85?1.05:1)*(1+(atkTrait.foot?Math.min(1,send.foot/Math.max(1,unitTotal(send)))*(atkTrait.foot-1):0));
+ const fort=Math.max(.72,1+y.def/210-y.siege/220);
+ const def=armyPower(defenseUnits,false,send)*(.75+defender.c/240)*fort*tactic.defense*dm*traitDefense*(y.officer&&loyaltyOf(y.officer)>=85?1.05:1);
+ // Exact uniform random factors in [0.90,1.10] are sampled for actual combat.
+ // Preview integrates a 41x41 grid over the same factors (an estimate, not a guarantee).
+ let wins=0;
+ for(let i=0;i<41;i++)for(let j=0;j<41;j++)if(atk*(.90+i*.005)>def*(.90+j*.005))wins++;
+ const chance=Math.round(wins/1681*100);
+ const winLoss=Math.min(.93,Math.max(.19,.30*tactic.loss*(def/Math.max(atk,1))**.20));
+ const loseLoss=Math.min(.93,Math.max(.19,.66*tactic.loss*(def/Math.max(atk,1))**.20));
+ const loss=Math.round(unitTotal(send)*(chance/100*winLoss+(1-chance/100)*loseLoss));
+ return {atk,def,chance,loss,send,commander,defender,traitAttack:atkTrait.desc,traitDefense:defTrait.desc};
+}
+function warPreview(){
+ const src=g.cities[g.selected];
+ const target=document.getElementById('target'),commander=document.getElementById('warCommander'),tactic=document.getElementById('warTactic'),force=document.getElementById('warForce');
+ const el=document.getElementById('warPreview');
+ if(!el||!target||!commander||!tactic||!force)return;
+ const to=g.cities[Number(target.value)];
+ if(!to||to.owner===src.owner){el.textContent='請選擇敵城';return}
+ const n=Math.floor(src.troops*Number(force.value));
+ const e=battleEstimate(src.id,to.id,n,{commander:Number(commander.value),tactic:tactic.value});
+ const label=e.chance>=75?'優勢':e.chance>=45?'勢均力敵':'劣勢';
+ el.textContent='預估勝率 '+e.chance+'%（'+label+'）｜我軍戰力 '+Math.round(e.atk)+'／敵軍 '+Math.round(e.def)+'｜預估我軍傷亡約 '+e.loss+' 人｜主將特性：'+e.traitAttack+'｜敵將特性：'+e.traitDefense+'。可能戰法：'+(warArt(e.commander,tactic.value,g.turn,true)?.name||'無')+'。此為不計戰法的基準估算，實戰存在隨機波動。';
+}
+function officerForBattle(city,commanderId){
+ const id=Number(commanderId);
+ if(id&&factionOf(id)===city.owner)return officer(id);
+ return officer(city.officer);
+}
+function warRecruit(type){
+ if(!ready())return;
+ const c=g.cities[g.selected],info=UNIT_INFO[type];
+ if(!info||c.owner!=='織田')return alert('只能在本家城池徵兵');
+ if(g.gold<info.cost||g.rice<info.rice)return alert('軍資金或兵糧不足');
+ g.gold-=info.cost;g.rice-=info.rice;
+ c.units[type]+=info.number;c.troops=unitTotal(c.units);
+ log(c.name+'徵募'+info.name+info.number+'人');save();render();
+}
+function battle(a,b,n,config={}){
+ const x=g.cities[a],y=g.cities[b];
+ if(!x||!y||x.owner===y.owner||!nearby(a).includes(b)||peaceful(x.owner,y.owner))return false;
+ const tactic=TACTICS[config.tactic]||TACTICS.balanced;
+ const commander=officerForBattle(x,config.commander);
+ const defender=officer(y.officer);
+ n=Math.min(Math.max(0,Math.floor(n)),x.troops);
+ if(n<100)return false;
+ const send=allocatedArmy(x,n);
+ n=unitTotal(send);
+ if(n<100)return false;
+ const defenseUnits={...y.units},defenderBefore=unitTotal(defenseUnits);
+ const estimate=battleEstimate(a,b,n,config);
+ const attackingArt=warArt(commander,config.tactic||'balanced',g.turn);
+ const defendingArt=warArt(defender,'balanced',g.turn);
+ const attackArtBase=estimate.atk;
+ const defenseArtBase=estimate.def;
+ const atk=estimate.atk*(attackingArt?.power||1)*(.90+Math.random()*.20);
+ const def=estimate.def*(defendingArt?.power||1)*(.90+Math.random()*.20);
+ const success=atk>def;
+ const attackerLoss=Math.min(.93,Math.max(.19,(success?.30:.66)*tactic.loss*(def/Math.max(atk,1))**.20));
+ const defenderLoss=Math.min(.96,Math.max(.12,(success?.83:.35)*(atk/Math.max(def,1))**.16));
+ for(const k of ['foot','horse','gun']){
+  x.units[k]-=send[k];
+  const survivors=Math.round(send[k]*(1-attackerLoss));
+  if(success)y.units[k]=survivors;
+  else x.units[k]+=survivors;
+  if(!success)y.units[k]=Math.max(0,Math.round(y.units[k]*(1-defenderLoss)));
+ }
+ const walls=Math.round((success?18:config.tactic==='siege'?19:8)*tactic.wall);
+ y.def=Math.max(10,y.def-walls);
+ y.siege=success?0:Math.min(100,y.siege+walls);
+ y.morale=success?Math.max(45,Math.round(x.morale-8)):Math.max(20,y.morale-12);
+ x.morale=Math.max(25,x.morale-(success?5:13));
+ if(success){
+  const old=y.officer,former=y.owner;
+  y.owner=x.owner;y.officer=0;
+  if(old&&g.personnel[old]){
+   g.personnel[old].faction='浪人';g.personnel[old].loyalty=0;
+   g.reserve=g.reserve.filter(id=>id!==old);
+  }
+  log('⚔ '+commander.n+'以'+tactic.name+'攻陷'+y.name+'城（原'+former+'家）；新駐軍'+unitTotal(y.units)+'人');
+ }else log('⚔ '+commander.n+'以'+tactic.name+'攻打'+y.name+'失利；城防降至'+Math.round(y.def)+'，攻城進度'+y.siege);
+ x.troops=unitTotal(x.units);y.troops=unitTotal(y.units);
+ if(config.commander&&g.personnel[config.commander])g.personnel[config.commander].xp+=(success?10:4);
+ g.war.last={turn:g.turn,from:x.name,to:y.name,commander:commander.n,tactic:tactic.name,success,attack:n,attackLost:Math.round(n*attackerLoss),defendLost:Math.round(defenderBefore*defenderLoss),walls:y.def,siege:y.siege,winChance:estimate.chance,trait:estimate.traitAttack,art:attackingArt?.name||'',defenseArt:defendingArt?.name||'',
+ attackArtMultiplier:attackingArt?.power||1,defenseArtMultiplier:defendingArt?.power||1,
+ attackArtBonus:Math.round(attackArtBase*((attackingArt?.power||1)-1)),
+ defenseArtBonus:Math.round(defenseArtBase*((defendingArt?.power||1)-1)),
+ attackArtChance:Math.round((warArt(commander,config.tactic||'balanced',g.turn,true)?.chance||0)*100),
+ defenseArtChance:Math.round((warArt(defender,'balanced',g.turn,true)?.chance||0)*100),
+ defenderName:defender.n,attackBase:Math.round(attackArtBase),defenseBase:Math.round(defenseArtBase)};
+ return true;
+}
+function march(){
+ if(!ready())return;
+ const a=g.selected,c=g.cities[a],el=document.getElementById('target');
+ if(c.owner!=='織田'||!el)return;
+ const b=Number(el.value);selectedTarget('target');
+ if(!nearby(a).includes(b)||g.cities[b].owner==='織田')return alert('無法進攻此城');
+ if(peaceful(c.owner,g.cities[b].owner))return alert('同盟或停戰期間不可進攻');
+ const commanderEl=document.getElementById('warCommander'),tacticEl=document.getElementById('warTactic'),forceEl=document.getElementById('warForce');
+ if(!commanderEl||!tacticEl||!forceEl)return alert('戰爭指令尚未準備完成');
+ for(const id of ['warCommander','warTactic','warForce'])selectedTarget(id);
+ const commander=Number(commanderEl.value),tactic=tacticEl.value,force=Number(forceEl.value);
+ if(factionOf(commander)!=='織田')return alert('主將必須是本家武將');
+ if(!TACTICS[tactic]||![.3,.5,.7,.9].includes(force))return alert('出征設定不正確');
+ const n=Math.floor(c.troops*force);
+ const cost=400+Math.ceil(n/250);
+ if(g.rice<cost)return alert('兵糧不足，需要'+cost);
+ if(n<100)return alert('兵力不足');
+ const target=g.cities[b];
+ const forecast=battleEstimate(a,b,n,{commander,tactic});
+ if(!confirm('預估勝率：'+forecast.chance+'%\n預估我軍傷亡：約'+forecast.loss+'人\n\n主將：'+officer(commander).n+'\n戰術：'+TACTICS[tactic].name+'\n出兵：'+n+'人\n目標：'+target.name+'城\n兵糧：'+cost+'\n確定出征？'))return;
+ g.rice-=cost;
+ if(!battle(a,b,n,{commander,tactic})){g.rice+=cost;return}
+ log('軍糧消耗'+cost+'；'+c.name+'目前駐軍'+c.troops);
+ pendingBattleResult=true;check();save();render();
+}
+function warPanel(c,enemies){
+ const report=g.war?.last;
+ const commanderOpts=OFFICERS.filter(o=>factionOf(o.id)==='織田').map(o=>`<option value="${o.id}"${optionSelected('warCommander',o.id)}>${o.n}｜統率${o.c} 武勇${o.w} 智略${o.i}</option>`).join('');
+ const tactics=Object.entries(TACTICS).map(([k,t])=>`<option value="${k}"${optionSelected('warTactic',k)}>${t.name}</option>`).join('');
+ const forces=[.3,.5,.7,.9].map(f=>`<option value="${f}"${optionSelected('warForce',f)}>${Math.round(f*100)}%（約${Math.floor(c.troops*f)}人）</option>`).join('');
+ const units=`足輕 ${c.units.foot}｜騎馬 ${c.units.horse}｜鐵砲 ${c.units.gun}`;
+ const last=report?`<div class="war-report">📜 最近戰報：第${report.turn}回合，${report.commander}以${report.tactic}攻打${report.to}：${report.success?'攻陷成功':'進攻失敗'}。投入${report.attack}兵，攻方損失約${report.attackLost}人。${report.success?'':'守方剩餘城防 '+report.walls+'、攻城進度 '+report.siege+'%。'}${report.art?' ⚡發動：'+report.art:''}${report.defenseArt?' 🛡守軍：'+report.defenseArt:''}</div>`:'';
+ return `<h2 style="margin-top:18px">⚔ 戰國軍略</h2><div class="war-preview">本城兵力：${c.troops}｜士氣 ${c.morale}<br>${units}<br>城防 ${Math.round(c.def)}｜攻城進度 ${c.siege}%</div><p class="personnel-subtitle">招募兵種</p><div class="actions"><button onclick="warRecruit('foot')">足輕 +500<br>400金／300糧</button><button onclick="warRecruit('horse')">騎馬 +240<br>700金／450糧</button><button onclick="warRecruit('gun')">鐵砲 +180<br>900金／600糧</button></div><p class="personnel-subtitle">出征指令</p>${enemies.length?`<select id="target" onchange="selectedTarget('target');warPreview()">${enemies.map(x=>`<option value="${x.id}"${optionSelected('target',x.id)}>${x.name}｜${x.troops}兵｜城防${Math.round(x.def)}</option>`).join('')}</select><div class="war-options"><label>主將<select id="warCommander" onchange="selectedTarget('warCommander');warPreview()">${commanderOpts}</select></label><label>戰術<select id="warTactic" onchange="selectedTarget('warTactic');warPreview()">${tactics}</select></label><label>出兵比例<select id="warForce" onchange="selectedTarget('warForce');warPreview()">${forces}</select></label></div><div class="war-preview" id="warPreview" aria-live="polite">正在計算戰力預測……</div><button class="full" onclick="march()">⚔ 確認出征</button>`:'<p>周圍沒有可進攻的敵城。</p>'}${last}<p class="hint">兵種相剋：足輕克騎馬、騎馬克鐵砲、鐵砲克足輕；包圍有利削弱城防，奇襲依主將智略調整效果。每次出征消耗兵糧。</p>`;
+}
+function diplomacyAction(type){if(!ready())return;let el=document.getElementById('diplomacyTarget');if(!el)return;let target=el.value;selectedTarget('diplomacyTarget');if(!FACTIONS.includes(target)||target==='織田'||!g.cities.some(c=>c.owner===target))return alert('無效的外交對象');let rel=relation('織田',target),key=pair('織田',target),cost={improve:200,alliance:500,truce:300,break:0}[type];if(cost===undefined)return;if(g.gold<cost)return alert('金錢不足');if(type==='break'){if(!active('alliances','織田',target))return alert('目前沒有同盟');delete g.diplomacy.alliances[key];setRelation('織田',target,rel-30);g.diplomacy.credit=Math.max(0,g.diplomacy.credit-25);log('織田家解除與'+target+'家的同盟，外交信用下降')}else if(type==='improve'){g.gold-=cost;setRelation('織田',target,rel+15);log('派遣使者至'+target+'家，關係改善至'+relation('織田',target))}else if(type==='alliance'){if(active('alliances','織田',target))return alert('雙方已結盟');g.gold-=cost;let chance=Math.max(.05,Math.min(.9,.25+(rel+50)/200+g.diplomacy.credit/500));if(Math.random()<chance){g.diplomacy.alliances[key]=g.turn+6;delete g.diplomacy.truces[key];setRelation('織田',target,rel+10);log('織田與'+target+'締結六回合同盟！')}else log(target+'家拒絕結盟提議')}else if(type==='truce'){if(peaceful('織田',target))return alert('已有同盟或停戰');g.gold-=cost;let chance=Math.max(.1,Math.min(.9,.5+rel/250));if(Math.random()<chance){g.diplomacy.truces[key]=g.turn+3;log('織田與'+target+'達成三回合停戰')}else log(target+'家拒絕停戰提議')}save();render()}
+function ai(){for(const owner of ['齋藤','今川']){if(!g.cities.some(c=>c.owner===owner))continue;let supply=Number(g.aiSupply[owner])||0;let cities=g.cities.filter(c=>c.owner===owner);let threatened=cities.some(c=>nearby(c.id).some(i=>g.cities[i].owner!==owner&&g.cities[i].troops>c.troops*1.2));for(const c of cities){supply+=Math.max(80,Math.round(c.farm*140));if(c.troops<(threatened?3500:2600)&&supply>=240){c.units.foot+=120;c.troops=unitTotal(c.units);supply-=240}if(!threatened&&supply>=400&&c.farm<5&&Math.random()<.25){c.farm++;supply-=400}if(threatened&&supply>=350&&c.def<90){c.def=Math.min(100,c.def+8);supply-=350}}let candidates=cities.flatMap(c=>nearby(c.id).map(i=>({from:c,to:g.cities[i]}))).filter(x=>x.to.owner!==owner&&!peaceful(owner,x.to.owner)).sort((a,b)=>(a.to.troops/a.from.troops)-(b.to.troops/b.from.troops));if(candidates.length){let {from,to}=candidates[0];let temperament=owner==='齋藤'?2.25:1.65;if(from.troops>Math.max(800,to.troops*temperament)&&supply>=500&&Math.random()<(owner==='今川'?.5:.28)){supply-=500;battle(from.id,to.id,Math.floor(from.troops*.6));setRelation(owner,to.owner,relation(owner,to.owner)-12)}}if(threatened){let other=FACTIONS.filter(f=>f!==owner&&g.cities.some(c=>c.owner===f)).sort((a,b)=>relation(owner,b)-relation(owner,a))[0];if(other&&!peaceful(owner,other)&&relation(owner,other)>-25&&Math.random()<.16){g.diplomacy.truces[pair(owner,other)]=g.turn+3;log(owner+'家與'+other+'家達成暫時停戰')}}g.aiSupply[owner]=supply}}
+function check(){if(!owned().length){g.over=true;log('織田家滅亡，遊戲結束')}else if(g.cities.every(c=>c.owner==='織田')){g.over=true;log('天下統一！織田家獲得勝利！')}}
+function confirmEndTurn(){
+ if(!g||g.over)return;
+ const turn=g.turn;
+ if(!confirm('確定結束第'+turn+'回合？\\n將結算收入、兵糧、武將忠誠度及敵方行動。'))return;
+ if(g.over||g.turn!==turn)return;
+ nextTurn();
+}
+function nextTurn(){if(g.over)return;for(const c of owned()){c.morale=Math.min(100,c.morale+4);let bonus=1+Math.max(0,officer(c.officer).p-60)/200+(c.officer?Math.max(0,loyaltyOf(c.officer)-60)/500:0);g.gold+=Math.round(c.trade*180*bonus*(traitInfo(officer(c.officer)).trade||1));g.rice+=Math.round(c.farm*550*bonus*(traitInfo(officer(c.officer)).farm||1))-Math.ceil(c.troops/10)}g.rice=Math.max(0,g.rice);ai();personnelTurn();g.turn++;scenarioArrival();for(const type of ['alliances','truces'])for(const [k,v] of Object.entries(g.diplomacy[type]))if(v<=g.turn){delete g.diplomacy[type][k];log(k.replace('|','與')+'的'+(type==='alliances'?'同盟':'停戰')+'期限已到')}check();log('進入第'+g.turn+'回合');save();render()}
+function reset(){if(confirm('確定開始1546年史實試行新局？此操作會覆蓋目前存檔，請先自行備份')){g=fresh();normalize();save();render()}}
+
+// 圖像原始尺寸 1536×1024，互動城池座標對齊底圖城郭。
+const MAP_POINTS=[
+ {x:604,y:402},{x:870,y:319},{x:739,y:247},{x:927,y:617},{x:1127,y:708},
+ {x:714,y:477},{x:714,y:577},{x:417,y:304},{x:337,y:205},{x:315,y:499},
+ {x:228,y:698},{x:389,y:817},{x:1203,y:518},{x:1375,y:605},{x:1286,y:764}
+];
+const OWNER_COLORS={'織田':'#b53434','齋藤':'#2e648b','今川':'#36834d'};
+// V0.7.6：地圖顯示模式只影響視覺，不寫入或改變任何城池存檔。
+let mapViewMode='routes';
+const FACTION_SHORT={'織田':'織','齋藤':'齋','今川':'今'};
+function mapModeControls(){
+ const modes=[['routes','⚔ 進軍'],['territory','🗾 領土'],['factions','🚩 勢力']];
+ return `<div class="map-view-controls" role="group" aria-label="戰略地圖顯示模式">${modes.map(([id,label])=>`<button type="button" class="${mapViewMode===id?'active':''}" aria-pressed="${mapViewMode===id}" onclick="setMapViewMode('${id}')">${label}</button>`).join('')}</div><div class="map-guide">${mapViewMode==='routes'?'金線：選取城池的相鄰道路；紅線：可進攻的敵城；青線：同勢力道路。':mapViewMode==='territory'?'半透明勢力圈代表城池控制區域示意，並非史實國境；攻下城池後會更新。':'每座城池的旗幟顯示目前控制勢力，並隨攻城結果更新。'}</div>`;
+}
+function setMapViewMode(mode){
+ if(!['routes','territory','factions'].includes(mode))return;
+ mapViewMode=mode;
+ const season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
+ document.querySelectorAll('.sengoku-hero-map').forEach(el=>{el.innerHTML=mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')});
+ const control=document.getElementById('heroMapControls');if(control)control.innerHTML=mapModeControls();
+ if(mapIsOpen)refreshMapDialog();
+}
+function mapMarkup(year,season){
+ const selectedCity=g.cities[g.selected];
+ const territories=mapViewMode==='territory'?g.cities.map(c=>{
+  const {x,y}=MAP_POINTS[c.id];return `<circle cx="${x}" cy="${y}" r="94" fill="${OWNER_COLORS[c.owner]||'#666'}" fill-opacity=".22" stroke="${OWNER_COLORS[c.owner]||'#666'}" stroke-opacity=".75" stroke-width="4" stroke-dasharray="12 8" pointer-events="none"/>`;
+ }).join(''):'';
+ const roads=ROADS.map(([a,b])=>{
+  const from=MAP_POINTS[a],to=MAP_POINTS[b];
+  const selected=a===g.selected||b===g.selected;
+  if(mapViewMode==='factions')return '';
+  if(mapViewMode==='routes'&&!selected)return '';
+  const enemy=selected&&(g.cities[a].owner!==g.cities[b].owner);
+  const stroke=mapViewMode==='territory'?'#fff0bb':enemy?'#e44234':'#42e1df';
+  const width=mapViewMode==='territory'?3:9;
+  return `<path d="M${from.x} ${from.y-20} L${to.x} ${to.y-20}" fill="none" stroke="#281a15" stroke-width="${width+5}" opacity=".65" pointer-events="none"/><path d="M${from.x} ${from.y-20} L${to.x} ${to.y-20}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-dasharray="${mapViewMode==='territory'?'9 8':'16 7'}" opacity=".95" pointer-events="none"/>`;
+ }).join('');
+ const nodes=g.cities.map(c=>{
+  const {x,y}=MAP_POINTS[c.id];const color=OWNER_COLORS[c.owner]||'#666';
+  const selected=c.id===g.selected;
+  const adjacent=nearby(g.selected).includes(c.id);
+  const canAttack=adjacent&&c.owner!==selectedCity.owner;
+  const flag=`<path d="M${x+27} ${y-68}v52" stroke="#2c2017" stroke-width="5"/><path d="M${x+30} ${y-68}h37v32h-37z" fill="${color}" stroke="#28170f" stroke-width="3"/><text x="${x+48}" y="${y-44}" text-anchor="middle" fill="#fff8db" font-size="20" font-weight="bold">${FACTION_SHORT[c.owner]||'城'}</text>`;
+  return `<g class="map-node ${selected?'selected':''}" role="button" tabindex="0" aria-label="${c.name}城 ${c.owner}家 ${c.troops}兵${canAttack?' 可進攻':''}" onclick="selectCity(${c.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCity(${c.id})}">
+   ${selected?`<circle cx="${x}" cy="${y-20}" r="67" fill="none" stroke="#ffe19b" stroke-width="7" stroke-dasharray="12 7"/>`:''}
+   ${mapViewMode==='routes'&&canAttack?`<circle cx="${x}" cy="${y-20}" r="56" fill="none" stroke="#e44234" stroke-width="6"/>`:''}
+   <circle cx="${x}" cy="${y-18}" r="${selected?33:25}" fill="${color}" stroke="${selected?'#fff3bd':'#241a12'}" stroke-width="${selected?7:3}" opacity=".94"/>
+   <text x="${x}" y="${y-11}" font-size="${selected?23:18}" font-weight="bold" text-anchor="middle" fill="#fff8d9" stroke="#151515" stroke-width=".8" paint-order="stroke">${FACTION_SHORT[c.owner]||'城'}</text>
+   ${flag}
+   <rect x="${x-49}" y="${y+9}" width="98" height="28" rx="5" fill="#f5e6be" stroke="#4b3021" stroke-width="2"/>
+   <text x="${x}" y="${y+29}" font-size="19" font-weight="bold" text-anchor="middle" fill="#24190f">${c.name}城</text>
+   <rect x="${x-36}" y="${y+40}" width="72" height="21" rx="5" fill="#1b2224" opacity=".9"/>
+   <text x="${x}" y="${y+56}" font-size="15" text-anchor="middle" fill="#fff0d3">${c.troops}兵</text>
+   <circle cx="${x}" cy="${y-15}" r="49" fill="transparent"/>
+  </g>`;
+ }).join('');
+ return `<svg class="map-scene" viewBox="0 0 1536 1024" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="戰國繪卷十五城可互動地圖">
+ <image href="sengoku_map_v075.webp" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"/>
+ <g>${territories}${roads}</g>${nodes}
+ <rect x="12" y="10" width="265" height="66" rx="8" fill="#f6e5b8" stroke="#50331b" stroke-width="5"/>
+ <text x="145" y="54" text-anchor="middle" font-size="34" font-weight="bold" fill="#302011">${year}年 ${season}</text>
+ </svg>`;
+}
+let mapIsOpen=false;
+function openMap(){
+ mapIsOpen=true;
+ document.body.classList.add('map-open');
+ const dlg=document.getElementById('mapDialog');
+ dlg.classList.add('open');
+ dlg.setAttribute('aria-hidden','false');
+ refreshMapDialog();
+ document.getElementById('mapClose').focus();
+}
+function closeMap(){
+ mapIsOpen=false;
+ document.body.classList.remove('map-open');
+ const dlg=document.getElementById('mapDialog');
+ dlg.classList.remove('open');
+ dlg.setAttribute('aria-hidden','true');
+ const btn=document.getElementById('openMapButton');
+ if(btn)btn.focus({preventScroll:true});
+}
+function refreshMapDialog(){
+ if(!mapIsOpen)return;
+ const season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
+ document.getElementById('mapCanvas').innerHTML=mapMarkup(year,season);
+ document.getElementById('mapDialogControls').innerHTML=mapModeControls();
+ const c=g.cities[g.selected];
+ document.getElementById('mapSelection').textContent=`目前選取：${c.name}城｜${c.owner}家｜${c.troops}兵`;
+ document.getElementById('mapEra').textContent=`${year}年 ${season} · 尾張・美濃・三河・遠江`;
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapIsOpen)closeMap()});
+
+
+let activeScreen='map';
+let pendingBattleResult=false;
+function uiSwitch(screen, preservePosition=false){
+ if(!['map','domestic','military','diplomacy','officers'].includes(screen))return;
+ activeScreen=screen;
+ document.querySelectorAll('.ui-screen').forEach(el=>el.hidden=el.dataset.screen!==screen);
+ document.querySelectorAll('#uiTabs button').forEach(el=>{
+  const active=el.dataset.screen===screen;el.classList.toggle('active',active);el.setAttribute('aria-current',active?'page':'false');
+ });
+ if(!preservePosition)window.scrollTo({top:0,behavior:'instant'});
+}
+function uiSelectCity(id){selectCity(id);uiSwitch('domestic')}
+let battlePhaseIndex=0;
+function uiDismissBattle(){document.getElementById('battleOverlay').hidden=true;battlePhaseIndex=0}
+function uiBattleNext(){battlePhaseIndex=Math.min(3,battlePhaseIndex+1);uiDrawBattlePhase()}
+function uiDrawBattlePhase(){
+ const r=g.war?.last,el=document.getElementById('battleResult');if(!r||!el)return;
+ const phase=battlePhaseIndex;
+ const artDetail=(name,bonus,chance,owner)=>name
+   ?`<div class="war-art-trigger"><b>⚡ ${owner}發動「${name}」</b><span>戰力增加 ${bonus.toLocaleString()}（發動率約 ${chance}%）</span></div>`
+   :`<div class="war-art-none">${owner}未發動戰法${chance?'（發動率約 '+chance+'%）':'（無可用戰法）'}</div>`;
+ const artRecap=artDetail(r.art,r.attackArtBonus||0,r.attackArtChance||0,r.commander)+artDetail(r.defenseArt,r.defenseArtBonus||0,r.defenseArtChance||0,r.defenderName||'守軍');
+ const phases=[
+  {icon:'🏳️',title:'出陣',text:`${r.commander}率領${r.attack.toLocaleString()}名將士，自${r.from}向${r.to}進軍。<br>採用「${r.tactic}」戰術。`},
+  {icon:'⚔️',title:'兩軍交鋒',text:`戰前基準勝率 ${r.winChance??'—'}%（不含戰法）。<br>我軍基準戰力 ${r.attackBase??'—'}，守軍 ${r.defenseBase??'—'}。<br>${artRecap}`},
+  {icon:'🏯',title:'攻城決戰',text:`${r.success?'攻破敵城，戰旗插上城頭！':'敵軍守住城池，我軍暫時退卻。'}<br>敵城城防 ${r.walls} · 圍城進度 ${r.siege}%<br>${artRecap}`},
+  {icon:r.success?'🎉':'📜',title:r.success?'攻城大捷':'戰事失利',text:`${r.commander} · ${r.tactic}<br>${r.from} → ${r.to}<br>${artRecap}`}
+ ];
+ const p=phases[phase];
+ const stats=phase===3?`<div class="ui-battle-stats"><div class="ui-battle-stat">我軍投入<b>${r.attack}</b></div><div class="ui-battle-stat">我軍損失約<b>${r.attackLost}</b></div><div class="ui-battle-stat">敵軍損失約<b>${r.defendLost}</b></div><div class="ui-battle-stat">城防 / 圍城<b>${r.walls} / ${r.siege}%</b></div></div>`:'';
+ el.innerHTML=`<div class="ui-battle-step">戰報 ${phase+1} / 4</div><div class="ui-battle-phase"><div class="phase-icon">${p.icon}</div><h3>${p.title}</h3><p>${p.text}</p></div>${stats}<div class="ui-battle-actions"><button type="button" onclick="uiDismissBattle()">關閉</button>${phase<3?'<button type="button" onclick="uiBattleNext()">下一幕 →</button>':'<button type="button" onclick="uiDismissBattle()">返回軍議</button>'}</div>`;
+}
+function uiReplayLastBattle(){
+ if(!g.war?.last)return alert('尚無戰鬥紀錄，請先進行一場戰鬥。');
+ battlePhaseIndex=0;uiDrawBattlePhase();document.getElementById('battleOverlay').hidden=false;
+}
+function uiBattleReport(){
+ if(!pendingBattleResult)return;
+ pendingBattleResult=false;
+ if(!g.war?.last)return;
+ battlePhaseIndex=0;uiDrawBattlePhase();document.getElementById('battleOverlay').hidden=false;
+}
+function cityDashboard(c){
+ const o=officer(c.officer),units=c.units||{foot:c.troops,horse:0,gun:0};
+ const metric=(name,value)=>`<div class="ui-city-metric"><span>${name}</span><b>${value}</b></div>`;
+ return `<div class="ui-city-dashboard"><div class="ui-city-head"><div class="ui-portrait"><span class="crest">🏯</span><span class="portrait-name">${c.name}</span></div><div><h2>${c.name}城</h2><p>${c.owner}家 · 城主 ${o.n}<br>特性 ${o.t}</p></div></div><div class="ui-city-grid">${metric('總兵力',c.troops.toLocaleString())}${metric('士氣',c.morale)}${metric('城防',Math.round(c.def))}${metric('農業',c.farm)}${metric('商業',c.trade)}${metric('圍城',c.siege+'%')}</div><div class="ui-city-units">🛡 足輕 ${units.foot}　🐎 騎馬 ${units.horse}　💥 鐵砲 ${units.gun}</div><div class="ui-quick-nav"><button type="button" onclick="uiSwitch('military')">⚔ 軍議與出征 →</button><button type="button" onclick="uiSwitch('officers')">👥 家臣團 →</button></div></div>`;
+}
+function uiEnhance(){
+ const game=document.getElementById('game');
+ const hud=game.querySelector('.hud');
+ const mapLaunch=game.querySelector('.map-launch');
+ const panels=[...game.querySelectorAll(':scope > section.panel')];
+ if(panels.length<4)return;
+ const castle=panels[0],diplomacy=panels[1],personnel=panels[2],chronicle=panels[3];
+ const footer=[...game.children].filter(el=>el!==hud&&el!==mapLaunch&&!panels.includes(el));
+ const screens={};
+ for(const name of ['map','domestic','military','diplomacy','officers']){
+  const section=document.createElement('div');section.className='ui-screen';section.dataset.screen=name;game.appendChild(section);screens[name]=section;
+ }
+ const c=g.cities[g.selected],o=officer(c.officer),season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
+ screens.map.innerHTML=`<div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
+ screens.map.appendChild(chronicle);
+ const citySummary=document.createElement('div');citySummary.innerHTML=cityDashboard(c);screens.domestic.appendChild(citySummary);
+ // Reuse the existing castle section: split into functional cards while keeping original controls and IDs.
+ const domesticPanel=document.createElement('section');domesticPanel.className='panel';
+ const militaryPanel=document.createElement('section');militaryPanel.className='panel';
+ const children=[...castle.children];
+ let warMode=false;
+ for(const node of children){
+  if(node.tagName==='H2'&&node.textContent.includes('戰國軍略'))warMode=true;
+  (warMode?militaryPanel:domesticPanel).appendChild(node);
+ }
+ // warPanel is injected as HTML after castle controls; its header is a direct H2.
+ screens.domestic.appendChild(domesticPanel);
+ screens.military.appendChild(militaryPanel);
+ screens.diplomacy.appendChild(diplomacy);
+ screens.officers.appendChild(personnel);
+ if(g.war?.last){
+  const replay=document.createElement('div');
+  replay.className='ui-quick-nav';
+  replay.innerHTML='<button type="button" onclick="uiReplayLastBattle()">📜 重看上一場戰報（不消耗資源）</button>';
+  screens.military.appendChild(replay);
+ }
+ const footerBox=document.createElement('section');footerBox.className='panel';
+ footerBox.innerHTML='<h2>⚙ 回合管理</h2>';
+ footer.forEach(el=>footerBox.appendChild(el));
+ screens.map.appendChild(footerBox);
+ castle.remove();mapLaunch?.remove();
+ const tabs=[['map','🗾','地圖'],['domestic','🏯','內政'],['military','⚔','軍事'],['diplomacy','🤝','外交'],['officers','👥','武將']];
+ document.getElementById('uiTabs').innerHTML=tabs.map(([id,icon,label])=>`<button type="button" data-screen="${id}" onclick="uiSwitch('${id}')"><span class="tab-icon">${icon}</span>${label}</button>`).join('');
+ // military screen should still provide an enemy selection when not owning a castle.
+ if(!militaryPanel.children.length)militaryPanel.innerHTML='<h2>⚔ 軍議</h2><p class="hint">請先從地圖選擇本家城池，才能下達出征命令。</p><button onclick="uiSwitch(\'map\')">返回戰略地圖</button>';
+ uiSwitch(activeScreen,true);
+ uiBattleReport();
+}
+
+function render(){
+ // Remember the viewport before replacing #game; Safari otherwise jumps to the top.
+ const previousY=window.scrollY||window.pageYOffset||0;
+ const previousScreen=activeScreen;
+ let c=g.cities[g.selected],o=officer(c.officer),enemies=nearby(c.id).map(i=>g.cities[i]).filter(x=>x.owner!=='織田'),choices=OFFICERS.filter(x=>factionOf(x.id)==='織田'),season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);document.getElementById('game').innerHTML=`<div class="hud" id="hud"><div class="stats"><div class="stat ${g.gold<400?'low':''}">💰 軍資金<b>${g.gold.toLocaleString()}</b></div><div class="stat ${g.rice<500?'low':''}">🌾 兵糧<b>${g.rice.toLocaleString()}</b></div><div class="stat">⏳ 回合<b>${g.turn}</b></div></div></div><div class="map-launch"><div><strong>🗾 戰略地圖</strong><div class="hint">繪卷十五城地圖 · 可橫向滑動</div></div><button type="button" id="openMapButton" onclick="openMap()">查看地圖 ↗</button></div><section class="panel"><h2>🏯 ${c.name}城</h2><p>勢力：${c.owner}家　兵力：${c.troops}</p><p>城防：${Math.round(c.def)}　農業：${c.farm}　商業：${c.trade}</p><div class="officer"><b>⚔ ${o.n}</b><p>統率 ${o.c}｜武勇 ${o.w}</p><p>智略 ${o.i}｜政治 ${o.p}</p><small>固有特性：${o.t}</small></div>${c.owner==='織田'&&!g.over?`<p class="hint">本回合：不限次數行動 · 只受資源與兵力限制</p><h2>內政指令</h2><div class="actions"><button onclick="doDomesticAction('farm')">開墾 300金</button><button onclick="doDomesticAction('trade')">商業 350金</button><button onclick="doDomesticAction('def')">築城 250金</button><button onclick="doDomesticAction('recruit')">徵兵 400金</button></div><h2 style="margin-top:18px">武將任命</h2><p class="hint">可直接調任其他城池的現任城主，原城主會回到待命家臣。交換兩城城主也無需先解除任命。</p><select id="officers" onchange="selectedTarget('officers')">${choices.map(x=>{let current=g.cities.find(z=>z.officer===x.id);return `<option value="${x.id}"${optionSelected('officers',x.id)||(!g.uiSelections?.officers&&x.id===c.officer)?' selected':''}>${x.n}｜${current?current.name+'城主':'待命'}｜統率${x.c} 政治${x.p}</option>`}).join('')}</select><button class="full" onclick="appoint()">任命／調任城主</button><button class="full" onclick="dismissCastellan()" ${c.officer?'':'disabled'}>解除本城城主任命</button><p class="personnel-subtitle">🔄 交換兩城城主</p><select id="swapCity" onchange="selectedTarget('swapCity')">${owned().filter(x=>x.id!==c.id&&x.officer).map(x=>`<option value="${x.id}"${optionSelected('swapCity',x.id)}>${x.name}｜${officer(x.officer).n}</option>`).join('')}</select><button class="full" onclick="swapCastellans()" ${owned().some(x=>x.id!==c.id&&x.officer)&&c.officer?'':'disabled'}>確認交換城主</button>${warPanel(c,enemies)}`:`<p class="hint">${g.over?'遊戲已結束':'此城目前不屬於織田家。'}</p>`}</section><section class="panel"><h2>🤝 外交評議</h2><p class="hint">外交信用：${g.diplomacy.credit}｜可不限次數交涉</p>${FACTIONS.filter(f=>f!=='織田'&&g.cities.some(c=>c.owner===f)).map(f=>`<p>${f}家：關係 ${relation('織田',f)}｜${active('alliances','織田',f)?'同盟至第'+g.diplomacy.alliances[pair('織田',f)]+'回合':active('truces','織田',f)?'停戰至第'+g.diplomacy.truces[pair('織田',f)]+'回合':'無條約'}</p>`).join('')}${!g.over?`<select id="diplomacyTarget" onchange="selectedTarget('diplomacyTarget')">${FACTIONS.filter(f=>f!=='織田'&&g.cities.some(c=>c.owner===f)).map(f=>`<option value="${f}"${optionSelected('diplomacyTarget',f)}>${f}家</option>`).join('')}</select><div class="actions"><button onclick="diplomacyAction('improve')">改善關係 200金</button><button onclick="diplomacyAction('alliance')">締結同盟 500金</button><button onclick="diplomacyAction('truce')">提出停戰 300金</button><button onclick="diplomacyAction('break')">解除同盟</button></div>`:''}</section>${personnelPanel()}<section class="panel"><h2>📜 戰國紀事</h2><div class="log">${g.logs.map(x=>`<div>• ${x}</div>`).join('')}</div></section>${g.over?`<section class="panel"><h2>${owned().length?'🎉 統一成功':'💀 遊戲結束'}</h2></section>`:''}<button class="full" onclick="nextTurn()" ${g.over?'disabled':''}>結束回合 →</button><button class="full" onclick="reset()">重新開始</button><p class="hint">V0.7.6 · 戰國勢力與領土 · 15城／36名人物資料 · 1546年代登場機制（勢力配置仍簡化） · 相容舊存檔</p>`;refreshMapDialog();uiEnhance();warPreview();const turnFab=document.getElementById('turnFab');if(turnFab){turnFab.disabled=!!g.over;turnFab.textContent=g.over?'⏳ 遊戲結束':'⏳ 結束回合';}
+ // Restore scroll after the selected screen has been reconstructed.
+ // Clamp to the new document height (e.g. a panel became shorter).
+ const restore=()=>{
+  if(activeScreen!==previousScreen)return;
+  const maxY=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
+  window.scrollTo({top:Math.min(previousY,maxY),behavior:'instant'});
+ };
+ restore();requestAnimationFrame(restore);
+}
+
+load();
+</script></body></html>
