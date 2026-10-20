@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>戰國群雄錄 V0.8.7</title><style>*{box-sizing:border-box}body{margin:0;background:#171e28;color:#f2e5c5;font-family:system-ui}header{text-align:center;background:#293447;padding:16px;border-bottom:3px solid #c6a268}h1{font-size:25px;color:#f6d28a;margin:0}small,.hint{color:#bcb9ae}main{max-width:560px;margin:auto;padding:12px}.panel{background:#283445;border:2px solid #647082;padding:13px;margin:12px 0;border-radius:5px}h2{font-size:18px;color:#f6d28a;margin:0 0 12px}.stats,.map,.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stats{grid-template-columns:repeat(3,1fr);position:sticky;top:0;z-index:100;background:#171e28;padding:8px 0 9px;margin:-8px 0 8px;box-shadow:0 6px 12px rgba(0,0,0,.4);border-bottom:1px solid #c6a268}.stats .stat{padding:8px 3px}.stats .stat b{font-variant-numeric:tabular-nums;font-size:clamp(14px,4vw,18px)}.stats .stat.low b{color:#ff8d81}.stat{text-align:center;background:#192533;padding:10px 3px;font-size:12px}.stat b{display:block;color:#f6d28a;font-size:18px}button,select{font:inherit}button{background:#725936;border:2px solid #c9a46b;color:#fff0d0;padding:11px 5px;border-radius:4px;cursor:pointer}button:disabled{opacity:.35}.castle{background:#26394b;min-height:75px}.castle.enemy{background:#563b48}.castle.active{outline:3px solid #f6d28a}.castle strong{display:block}.castle span{font-size:12px}.full{width:100%;margin-top:10px}.officer{background:#192533;padding:11px;margin:9px 0;border-left:4px solid #c9a46b}.officer b{color:#f6d28a}select{width:100%;padding:10px;background:#192533;color:white;border:1px solid #8893a0;margin:8px 0}.log{font-size:13px;line-height:1.8;max-height:220px;overflow:auto}.hint{font-size:12px}
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>戰國群雄錄 V0.8.8</title><style>*{box-sizing:border-box}body{margin:0;background:#171e28;color:#f2e5c5;font-family:system-ui}header{text-align:center;background:#293447;padding:16px;border-bottom:3px solid #c6a268}h1{font-size:25px;color:#f6d28a;margin:0}small,.hint{color:#bcb9ae}main{max-width:560px;margin:auto;padding:12px}.panel{background:#283445;border:2px solid #647082;padding:13px;margin:12px 0;border-radius:5px}h2{font-size:18px;color:#f6d28a;margin:0 0 12px}.stats,.map,.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stats{grid-template-columns:repeat(3,1fr);position:sticky;top:0;z-index:100;background:#171e28;padding:8px 0 9px;margin:-8px 0 8px;box-shadow:0 6px 12px rgba(0,0,0,.4);border-bottom:1px solid #c6a268}.stats .stat{padding:8px 3px}.stats .stat b{font-variant-numeric:tabular-nums;font-size:clamp(14px,4vw,18px)}.stats .stat.low b{color:#ff8d81}.stat{text-align:center;background:#192533;padding:10px 3px;font-size:12px}.stat b{display:block;color:#f6d28a;font-size:18px}button,select{font:inherit}button{background:#725936;border:2px solid #c9a46b;color:#fff0d0;padding:11px 5px;border-radius:4px;cursor:pointer}button:disabled{opacity:.35}.castle{background:#26394b;min-height:75px}.castle.enemy{background:#563b48}.castle.active{outline:3px solid #f6d28a}.castle strong{display:block}.castle span{font-size:12px}.full{width:100%;margin-top:10px}.officer{background:#192533;padding:11px;margin:9px 0;border-left:4px solid #c9a46b}.officer b{color:#f6d28a}select{width:100%;padding:10px;background:#192533;color:white;border:1px solid #8893a0;margin:8px 0}.log{font-size:13px;line-height:1.8;max-height:220px;overflow:auto}.hint{font-size:12px}
 /* V0.7.4.1：僅資源列固定，地圖獨立全螢幕，不依捲動縮放 */
 .hud{position:sticky;top:0;z-index:110;background:#171e28;padding:3px 0 5px;box-shadow:0 6px 15px #0009}
 .hud .stats{position:static;top:auto;box-shadow:none;margin:0;padding:4px 0;border-bottom:0}
@@ -175,7 +175,7 @@ body:has(.ui-battle-overlay:not([hidden])) .turn-fab{display:none}
 .map-node:focus circle:first-of-type{stroke:#fff;stroke-width:7}.map-scene .map-node{outline:none}.province-label{opacity:.96}.city-caption,.city-troops{pointer-events:none}
 @media(min-width:800px){main{max-width:980px}.sengoku-hero-map{height:auto;max-height:600px}}
 
-/* V0.8.7 reference-inspired full screen strategy map */
+/* V0.8.8 reference-inspired full screen strategy map */
 body.v082-map{overflow:hidden}body.v082-map>header,body.v082-map .hud,body.v082-map .map-fab,body.v082-map .turn-fab,body.v082-map #uiTabs{display:none!important}
 body.v082-map main{position:fixed;inset:0;z-index:420;max-width:none!important;padding:0!important;margin:0!important;overflow:hidden}
 body.v082-map .ui-screen[data-screen="map"]{position:absolute;inset:0;overflow:hidden}
@@ -194,7 +194,7 @@ body.v082-map .v082-bottom{display:flex;position:absolute;bottom:8px;left:8px;ri
 @media(max-height:520px){body.v082-map .v082-top{height:43px}body.v082-map .v082-side{top:48px;padding:4px;gap:1px}.v082-side>b{font-size:12px;padding:0}.v082-force i{width:20px;height:20px;font-size:12px}.v082-controls .zoom-controls{padding:2px 4px}.v082-controls .map-view-controls button{padding:4px 6px}}
 @media(max-width:750px){.v082-top span:nth-child(2){display:none}.v082-controls .zoom-controls span{display:none}.v082-controls .zoom-controls{min-width:130px}.v082-controls .zoom-controls button{display:none}.v082-controls .map-view-controls button{padding:5px}.v082-end{min-width:80px}}
 
-/* V0.8.7: iPhone portrait only — map-first layout */
+/* V0.8.8: iPhone portrait only — map-first layout */
 html,body{overscroll-behavior:none}
 body.v082-map{height:100dvh;overflow:hidden}
 body.v082-map main{height:100dvh;min-height:0}
@@ -229,7 +229,7 @@ body.v082-map .map-node .castle-art{filter:drop-shadow(1px 2px 1px #21180a9c)}
 @media(orientation:landscape){body.v082-map::after{content:'請將手機轉為直向遊玩《戰國群雄錄》';position:fixed;inset:0;z-index:99999;display:grid;place-items:center;text-align:center;padding:25px;background:#101a23;color:#f4d48b;font:bold 24px serif}}
 
 
-/* V0.8.7 map legibility refinements */
+/* V0.8.8 map legibility refinements */
 body.v082-map .map-node .castle-art{filter:drop-shadow(1px 1px 1px #21180a9c)}
 body.v082-map .map-node .city-caption{pointer-events:none}
 body.v082-map .map-node .city-troops{display:none!important}
@@ -241,19 +241,19 @@ body.v082-map .map-zoom-surface[data-detail="overview"] .hq-node .city-caption{d
 body.v082-map .map-node.selected .city-caption rect{stroke:#fff2a4;stroke-width:3}
 
 
-/* V0.8.7: map scales to cover the visible viewport, with no blank bottom region. */
+/* V0.8.8: map scales to cover the visible viewport, with no blank bottom region. */
 body.v082-map .sengoku-hero-map .map-zoom-surface{flex:none!important;max-width:none!important;max-height:none!important;margin:0!important;}
 body.v082-map .sengoku-hero-map .map-scene{display:block!important;aspect-ratio:1672/941!important;}
 body.v082-map .sengoku-hero-map{scrollbar-width:none;}
 body.v082-map .sengoku-hero-map::-webkit-scrollbar{display:none;}
 
-/* V0.8.7: dialog map fills viewport immediately; zoom changes only the view area. */
+/* V0.8.8: dialog map fills viewport immediately; zoom changes only the view area. */
 .map-dialog.open .map-dialog-body{position:relative;display:block!important;flex:1 1 0!important;min-height:0!important;overflow:auto!important;padding:0!important;align-items:unset!important;justify-content:unset!important;background:#bda477!important;}
 .map-dialog.open #mapCanvas{display:block!important;width:100%!important;min-width:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
 .map-dialog.open .map-zoom-surface{display:block!important;max-width:none!important;max-height:none!important;margin:0!important;flex:none!important;}
 .map-dialog.open .map-scene{display:block!important;width:100%!important;height:auto!important;min-width:0!important;max-width:none!important;max-height:none!important;aspect-ratio:1672/941!important;}
-</style></head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.8.7 黑金介面</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
-<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.8.7<br>使用地圖上方拉桿縮放，按「國名」切換國名標籤。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
+</style></head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.8.8 黑金介面</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
+<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.8.8<br>使用地圖上方拉桿縮放，按「國名」切換國名標籤。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
  <div class="map-dialog-header"><strong id="mapEra">戰略地圖</strong><button id="mapClose" type="button" onclick="closeMap()">✕ 關閉</button></div>
  <div id="mapDialogControls"></div><div class="map-dialog-body"><div id="mapCanvas" style="width:100%;display:flex;align-items:center;justify-content:center"></div></div>
  <div class="map-dialog-footer"><p id="mapSelection">請點選城池</p><button type="button" onclick="closeMap()">返回內政與軍事操作</button></div>
@@ -419,10 +419,22 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(g))}catch(e){}}
 function load(){try{g=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){g=fresh()}normalize();save();render()}
 function log(s){g.logs.unshift(s);g.logs=g.logs.slice(0,35)}
 function selectCity(id){
- const viewport=document.querySelector("#mapDialog .map-dialog-body");
- const anchor=mapIsOpen&&viewport?{left:viewport.scrollLeft,top:viewport.scrollTop}:null;
- g.selected=id;save();render();
- if(anchor&&viewport){viewport.scrollLeft=anchor.left;viewport.scrollTop=anchor.top;}
+ // V0.8.8: Selecting a castle must never reconstruct the full-screen map.
+ // Replacing the SVG used to reset Safari's scroll container and recenter the camera.
+ g.selected=id;
+ save();
+ if(mapIsOpen){
+  const selection=document.getElementById('mapSelection');
+  const c=g.cities[id];
+  if(selection&&c)selection.textContent=`目前選取：${c.name}城｜${c.owner}家｜${c.troops}兵`;
+  document.querySelectorAll('#mapDialog .map-node').forEach(node=>{
+   node.classList.toggle('selected',Number(node.dataset.cityId)===Number(id));
+  });
+  // The road overlay depends on the selected city, but only redraw it if
+  // the player changes the map mode explicitly; never reset the viewport here.
+  return;
+ }
+ render();
 }
 function ready(){if(g.over){alert('遊戲已結束');return false}return true}
 function doDomesticAction(type){if(!ready())return;let c=g.cities[g.selected];if(c.owner!=='織田')return alert('只能管理織田家城池');let bonus=1+Math.max(0,officer(c.officer).p-60)/200+(c.officer?Math.max(0,loyaltyOf(c.officer)-60)/500:0);if(type==='farm'){if(g.gold<300)return alert('金錢不足');g.gold-=300;c.farm++;log(c.name+'開墾農田')}else if(type==='trade'){if(g.gold<350)return alert('金錢不足');g.gold-=350;c.trade++;log(c.name+'發展商業')}else if(type==='def'){if(c.def>=100)return alert('城防已達上限');if(g.gold<250)return alert('金錢不足');g.gold-=250;c.def=Math.min(100,c.def+12*bonus);log(c.name+'修築城防')}else if(type==='recruit'){if(g.gold<400||g.rice<300)return alert('資源不足');g.gold-=400;g.rice-=300;const qty=Math.round(500*bonus);c.units.foot+=qty;c.troops=unitTotal(c.units);log(c.name+'徵募足輕')}else return;save();render()}
@@ -829,6 +841,8 @@ function closeMap(){
  const dlg=document.getElementById('mapDialog');
  dlg.classList.remove('open');
  dlg.setAttribute('aria-hidden','true');
+ // Update city management panels after leaving the map, not while selecting.
+ render();
  const btn=document.getElementById('openMapButton');
  if(btn)btn.focus({preventScroll:true});
 }
@@ -929,7 +943,7 @@ function uiEnhance(){
   const section=document.createElement('div');section.className='ui-screen';section.dataset.screen=name;game.appendChild(section);screens[name]=section;
  }
  const c=g.cities[g.selected],o=officer(c.officer),season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
- screens.map.innerHTML=`<aside class="v082-side"><b>勢力一覽</b>${FACTIONS.map((f,i)=>`<div class="v082-force"><i style="background:${OWNER_COLORS[f]}">${["✿","葵","◆","▲","◇","◈","❖","✦"][i]}</i>${f}家</div>`).join("")}</aside><div class="v082-top"><strong>戰國群雄錄 <small>V0.8.7</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
+ screens.map.innerHTML=`<aside class="v082-side"><b>勢力一覽</b>${FACTIONS.map((f,i)=>`<div class="v082-force"><i style="background:${OWNER_COLORS[f]}">${["✿","葵","◆","▲","◇","◈","❖","✦"][i]}</i>${f}家</div>`).join("")}</aside><div class="v082-top"><strong>戰國群雄錄 <small>V0.8.8</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
  screens.map.appendChild(chronicle);
  const citySummary=document.createElement('div');citySummary.innerHTML=cityDashboard(c);screens.domestic.appendChild(citySummary);
  // Reuse the existing castle section: split into functional cards while keeping original controls and IDs.
