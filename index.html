@@ -289,7 +289,7 @@ body.v082-map .sengoku-hero-map .minor-node .castle-art{opacity:.92}
 #mapDialog .v089-sheet{bottom:calc(59px + env(safe-area-inset-bottom));max-height:48dvh;overflow:auto;z-index:32}
 @media(max-height:680px){#mapDialog .map-dialog-header{padding-top:calc(4px + env(safe-area-inset-top));padding-bottom:4px}#mapDialog .v090-dialog-tabs button{padding:5px 2px}}
 
-/* V0.9.6 — main strategy map and overview dialog are independent. */
+/* V0.9.7 — main strategy map and overview dialog are independent. */
 body.v082-map .v082-side{display:none!important}
 body.v082-map .v082-top{z-index:12}
 body.v082-map .v082-bottom{z-index:13;gap:4px;padding:5px 8px max(5px,env(safe-area-inset-bottom));}
@@ -315,7 +315,7 @@ body.v082-map .v089-main-sheet{bottom:calc(var(--v091-bottom-height,177px) + 4px
 #mapDialog .v090-dialog-tabs{display:none!important}
 @media(max-width:375px){body.v082-map .v091-main-nav button{min-height:40px}body.v082-map .v082-bottom{gap:2px}}
 
-/* V0.9.6: main strategy map only — eliminate exposed canvas caused by artificial 90/105px scroll margins. */
+/* V0.9.7: main strategy map only — eliminate exposed canvas caused by artificial 90/105px scroll margins. */
 body.v082-map .sengoku-hero-map .map-zoom-surface{
  margin:0!important;padding:0!important;display:block!important;min-height:0!important;
  box-sizing:border-box!important;overflow:visible!important;
@@ -326,14 +326,14 @@ body.v082-map .sengoku-hero-map{
 }
 body.v082-map .sengoku-hero-map .map-scene{display:block!important;width:100%!important;height:auto!important;}
 </style><style id="v093-label-style">
-/* V0.9.6 unified castle caption visibility in every map viewport */
+/* V0.9.7 unified castle caption visibility in every map viewport */
 .map-scene .map-node .city-caption{display:none!important}
 .map-scene .map-node.hq-node .city-caption{display:block!important}
 body.v093-selected .map-scene .map-node.selected .city-caption{display:block!important}
 .map-scene .map-node .city-troops{display:none!important}
 .map-scene .province-label{pointer-events:none!important}
 
-/* V0.9.6: selected labels and permanent faction headquarters */
+/* V0.9.7: selected labels and permanent faction headquarters */
 body.v082-map .map-node .city-caption{display:none!important;pointer-events:none}
 body.v082-map .map-node.hq-node .city-caption,body.v093-selected .map-node.selected .city-caption{display:block!important}
 body.v082-map .map-zoom-surface[data-detail="overview"] .minor-node.selected{display:block!important}
@@ -342,8 +342,8 @@ body.v082-map .province-label{pointer-events:none}
 body.v082-map .province-label text{font-family:serif;font-weight:800}
 body.v082-map .map-node .city-troops{display:none!important}
 </style>
-</head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.9.6 直向操作修正版</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
-<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.9.6<br>使用地圖上方拉桿縮放，點擊城池顯示所屬令制國名。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
+</head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.9.7 直向操作修正版</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
+<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.9.7<br>使用地圖上方拉桿縮放，點擊城池顯示所屬令制國名。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
  <div class="map-dialog-header"><strong id="mapEra">戰略地圖</strong><button id="mapClose" type="button" onclick="closeMap()">✕ 關閉</button></div>
  <div id="mapDialogControls"></div><div class="map-dialog-body"><div id="mapCanvas" style="width:100%;display:flex;align-items:center;justify-content:center"></div></div>
  <div class="map-dialog-footer"><p id="mapSelection">請點選城池</p></div><section id="v089CitySheet" class="v089-sheet" hidden aria-label="城池資訊"></section>
@@ -544,14 +544,11 @@ function v093UpdateMapSelection(scope){
  const scene=scope.querySelector('.map-scene');if(!scene)return;
  const old=scene.querySelector('.province-label');if(old)old.remove();
  const data=v093HasSelection?CITY_DATA[g.selected]:null;const region=PROVINCES.find(([n])=>n===data?.province);
- if(region){const [name,bx,by]=region;const points=g.cities.map(c=>MAP_POINTS[c.id]);
- const x=bx,y=by;
- const NS='http://www.w3.org/2000/svg',grp=document.createElementNS(NS,'g');grp.setAttribute('class','province-label');grp.setAttribute('pointer-events','none');grp.setAttribute('opacity','.96');
- const path=document.createElementNS(NS,'path');path.setAttribute('d',`M${x-24} ${y-66} Q${x-24} ${y-79} ${x-11} ${y-82} Q${x} ${y-89} ${x+11} ${y-82} Q${x+24} ${y-79} ${x+24} ${y-66} L${x+24} ${y+63} Q${x+24} ${y+78} ${x+10} ${y+81} Q${x} ${y+87} ${x-10} ${y+81} Q${x-24} ${y+78} ${x-24} ${y+63} Z`);path.setAttribute('fill','#f2dfb5');path.setAttribute('stroke','#5d4026');path.setAttribute('stroke-width','4');grp.appendChild(path);
- const inner=document.createElementNS(NS,'path');inner.setAttribute('d',`M${x-18} ${y-64} Q${x-18} ${y-76} ${x-8} ${y-77} Q${x} ${y-82} ${x+8} ${y-77} Q${x+18} ${y-76} ${x+18} ${y-64} L${x+18} ${y+61} Q${x+18} ${y+73} ${x+8} ${y+75} Q${x} ${y+79} ${x-8} ${y+75} Q${x-18} ${y+73} ${x-18} ${y+61} Z`);inner.setAttribute('fill','none');inner.setAttribute('stroke','#b08a55');inner.setAttribute('stroke-width','1.8');grp.appendChild(inner);
- [...name].forEach((ch,i)=>{const t=document.createElementNS(NS,'text');t.setAttribute('x',x);t.setAttribute('y',y-38+i*34);t.setAttribute('text-anchor','middle');t.setAttribute('fill','#33251a');t.setAttribute('font-size','29');t.setAttribute('font-weight','800');t.textContent=ch;grp.appendChild(t)});
- const firstNode=scene.querySelector('.map-node');scene.insertBefore(grp,firstNode||null);
+ if(region){
+  const markup=v097ProvinceMarkup(region);
+  if(markup){const holder=document.createElementNS('http://www.w3.org/2000/svg','g');holder.innerHTML=markup;const plaque=holder.firstElementChild;scene.insertBefore(plaque,scene.querySelector('.map-node')||null);}
  }
+
  const routeGroup=scene.querySelector('[data-v093-routes]');if(routeGroup)routeGroup.remove();
  if(mapViewMode==='routes'){
   const route=document.createElementNS('http://www.w3.org/2000/svg','g');route.setAttribute('data-v093-routes','');route.setAttribute('pointer-events','none');
@@ -959,6 +956,62 @@ function setMapZoom(value){
  document.querySelectorAll('.map-guide').forEach(el=>el.textContent=(mapZoom<.8?'總覽：僅顯示各勢力本據城。':mapZoom<1.2?'中景：全部城池建築與本據城名稱。':'近景：本據城常駐名稱，點擊其他城池顯示名稱與國名。')+' 拖曳或滑動可移動地圖。');
 }
 
+// V0.9.7: adaptive province plaque placement in map coordinates.
+// Castle coordinates and saved data are never changed.
+function v097ProvinceMarkup(region){
+ if(!region||!v093HasSelection)return '';
+ const [name,ax,ay]=region;
+ const zoom=Math.max(.5,Math.min(2,mapZoom||1));
+ // Three zoom bands. At high zoom the plaque has a fixed visual-size cap.
+ const sizeFactor=zoom<=1.2?.72/zoom:zoom<=1.6?1/zoom:.90/zoom;
+ const obstacles=[];
+ const hq=headquarters();
+ for(const c of g.cities){
+  const p=MAP_POINTS[c.id];if(!p)continue;
+  // Castle art / hit target (including non-headquarters castles).
+  obstacles.push({x:p.x-23,y:p.y-40,w:46,h:60});
+  // Only headquarters and selected city have visible wooden captions.
+  if(hq.has(c.id)||c.id===g.selected){
+   const title=CITY_DATA[c.id]?.displayName||c.name+'城';
+   const w=Math.max(78,[...title].length*19+20);
+   obstacles.push({x:p.x-w/2-5,y:p.y+8,w:w+10,h:38});
+  }
+ }
+ const collision=(a,b,pad=7)=>a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y;
+ const inside=b=>b.x>=9&&b.y>=9&&b.x+b.w<=1663&&b.y+b.h<=932;
+ // Search nearby positions in expanding rings; score favors the geographic anchor.
+ function place(w,h){
+  let best=null;
+  const offsets=[[0,0]];
+  for(const r of [45,90,135,190,255,325]){
+   for(let i=0;i<16;i++){
+    const a=i*Math.PI/8;
+    offsets.push([Math.round(Math.cos(a)*r),Math.round(Math.sin(a)*r)]);
+   }
+  }
+  for(const [dx,dy] of offsets){
+   const x=Math.max(9,Math.min(1663-w,ax+dx-w/2));
+   const y=Math.max(9,Math.min(932-h,ay+dy-h/2));
+   const b={x,y,w,h};if(!inside(b)||obstacles.some(o=>collision(b,o)))continue;
+   const distance=(x+w/2-ax)**2+(y+h/2-ay)**2;
+   if(!best||distance<best.distance)best={x,y,distance};
+  }
+  return best;
+ }
+ const width=48*sizeFactor,height=174*sizeFactor;
+ let compact=false,position=place(width,height);
+ if(!position){compact=true;position=place(78*sizeFactor,39*sizeFactor);}
+ // If no completely free location exists, suppress the plaque rather than cover a castle.
+ if(!position)return '';
+ const cx=position.x+(compact?78:48)*sizeFactor/2;
+ const cy=position.y+(compact?39:174)*sizeFactor/2;
+ const s=sizeFactor;
+ const escaped=name.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ if(compact){
+  return `<g class="province-label v097-compact" data-province="${escaped}" pointer-events="none" transform="translate(${cx} ${cy}) scale(${s})"><path d="M-32 -18 H32 L39 -10 V10 L32 18 H-32 L-39 10 V-10 Z" fill="#f2dfb5" stroke="#5d4026" stroke-width="3"/><path d="M-31 -12H31M-31 12H31" stroke="#b08a55" stroke-width="1"/><text text-anchor="middle" dominant-baseline="middle" font-size="15" font-weight="800" fill="#33251a">${escaped}</text></g>`;
+ }
+ return `<g class="province-label v097-plaque" data-province="${escaped}" pointer-events="none" transform="translate(${cx} ${cy}) scale(${s})"><path d="M-24 -66 Q-24 -79 -11 -82 Q0 -89 11 -82 Q24 -79 24 -66 L24 63 Q24 78 10 81 Q0 87 -10 81 Q-24 78 -24 63 Z" fill="#f2dfb5" stroke="#5d4026" stroke-width="4"/><path d="M-18 -64 Q-18 -76 -8 -77 Q0 -82 8 -77 Q18 -76 18 -64 L18 61 Q18 73 8 75 Q0 79 -8 75 Q-18 73 -18 61 Z" fill="none" stroke="#b08a55" stroke-width="1.8"/><text text-anchor="middle" fill="#33251a" font-size="29" font-weight="800">${[...name].map((ch,i)=>`<tspan x="0" y="${-38+i*34}">${ch}</tspan>`).join('')}</text></g>`;
+}
 function mapMarkup(year,season){
  const hq=headquarters(),detail=mapZoom<.8?'overview':mapZoom<1.2?'medium':'detail';
  const territories=(mapViewMode==='territory'||mapViewMode==='factions')?g.cities.map(c=>{const p=MAP_POINTS[c.id];return `<circle cx="${p.x}" cy="${p.y}" r="48" fill="${OWNER_COLORS[c.owner]}" fill-opacity=".25" stroke="${OWNER_COLORS[c.owner]}" stroke-width="3" pointer-events="none"/>`;}).join(''):'';
@@ -973,10 +1026,7 @@ function mapMarkup(year,season){
  </g>`;}).join('');
  const selectedProvince=v093HasSelection?CITY_DATA[g.selected]?.province:null;
  const provinceInfo=PROVINCES.find(([name])=>name===selectedProvince);
- const provinces=provinceInfo?(()=>{const [name,baseX,baseY]=provinceInfo;
-  const x=baseX,y=baseY;
-  const chars=[...name];const startY=y-38;
-  return `<g class="province-label" data-province="${name}" pointer-events="none" opacity=".96"><path d="M${x-24} ${y-66} Q${x-24} ${y-79} ${x-11} ${y-82} Q${x} ${y-89} ${x+11} ${y-82} Q${x+24} ${y-79} ${x+24} ${y-66} L${x+24} ${y+63} Q${x+24} ${y+78} ${x+10} ${y+81} Q${x} ${y+87} ${x-10} ${y+81} Q${x-24} ${y+78} ${x-24} ${y+63} Z" fill="#f2dfb5" stroke="#5d4026" stroke-width="4"/><path d="M${x-18} ${y-64} Q${x-18} ${y-76} ${x-8} ${y-77} Q${x} ${y-82} ${x+8} ${y-77} Q${x+18} ${y-76} ${x+18} ${y-64} L${x+18} ${y+61} Q${x+18} ${y+73} ${x+8} ${y+75} Q${x} ${y+79} ${x-8} ${y+75} Q${x-18} ${y+73} ${x-18} ${y+61} Z" fill="none" stroke="#b08a55" stroke-width="1.8"/><text text-anchor="middle" fill="#33251a" font-size="29" font-weight="800">${chars.map((ch,i)=>`<tspan x="${x}" y="${startY+i*34}">${ch}</tspan>`).join('')}</text></g>`;})():'';
+ const provinces=provinceInfo?v097ProvinceMarkup(provinceInfo):'';
  return `<div class="map-zoom-surface" data-detail="${detail}" style="width:${mapZoom*100}%;--map-scale:${mapZoom}"><svg class="map-scene" viewBox="0 0 1672 941" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="戰國群雄錄44城戰略地圖"><image href="map_landscape.webp" width="1672" height="941" preserveAspectRatio="none"/>${territories}<g pointer-events="none">${roads}</g>${provinces}${nodes}</svg></div>`;
 }
 let mapIsOpen=false;
@@ -1101,7 +1151,7 @@ function uiEnhance(){
   const section=document.createElement('div');section.className='ui-screen';section.dataset.screen=name;game.appendChild(section);screens[name]=section;
  }
  const c=g.cities[g.selected],o=officer(c.officer),season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
- screens.map.innerHTML=`<div class="v082-top"><strong>戰國群雄錄 <small>V0.9.6</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><section id="v089MainSheet" class="v089-sheet v089-main-sheet" hidden aria-label="城池資訊"></section><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button><nav class="v091-main-nav" aria-label="遊戲功能導覽"><button type="button" class="active" onclick="uiSwitch('map')">🗾<span>地圖</span></button><button type="button" onclick="uiSwitch('domestic')">🏯<span>內政</span></button><button type="button" onclick="uiSwitch('military')">⚔<span>軍事</span></button><button type="button" onclick="uiSwitch('diplomacy')">🤝<span>外交</span></button><button type="button" onclick="uiSwitch('officers')">👥<span>武將</span></button></nav></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
+ screens.map.innerHTML=`<div class="v082-top"><strong>戰國群雄錄 <small>V0.9.7</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><section id="v089MainSheet" class="v089-sheet v089-main-sheet" hidden aria-label="城池資訊"></section><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button><nav class="v091-main-nav" aria-label="遊戲功能導覽"><button type="button" class="active" onclick="uiSwitch('map')">🗾<span>地圖</span></button><button type="button" onclick="uiSwitch('domestic')">🏯<span>內政</span></button><button type="button" onclick="uiSwitch('military')">⚔<span>軍事</span></button><button type="button" onclick="uiSwitch('diplomacy')">🤝<span>外交</span></button><button type="button" onclick="uiSwitch('officers')">👥<span>武將</span></button></nav></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
  screens.map.appendChild(chronicle);
  const citySummary=document.createElement('div');citySummary.innerHTML=cityDashboard(c);screens.domestic.appendChild(citySummary);
  // Reuse the existing castle section: split into functional cards while keeping original controls and IDs.
@@ -1155,7 +1205,7 @@ function render(){
 }
 
 
-// V0.9.6: measure the main-map toolbar rather than guessing its height.
+// V0.9.7: measure the main-map toolbar rather than guessing its height.
 function v091MeasureMainMap(){
  const bar=document.querySelector('.ui-screen[data-screen="map"] .v082-bottom');
  const screen=document.querySelector('.ui-screen[data-screen="map"]');
