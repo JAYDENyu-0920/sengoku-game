@@ -289,7 +289,7 @@ body.v082-map .sengoku-hero-map .minor-node .castle-art{opacity:.92}
 #mapDialog .v089-sheet{bottom:calc(59px + env(safe-area-inset-bottom));max-height:48dvh;overflow:auto;z-index:32}
 @media(max-height:680px){#mapDialog .map-dialog-header{padding-top:calc(4px + env(safe-area-inset-top));padding-bottom:4px}#mapDialog .v090-dialog-tabs button{padding:5px 2px}}
 
-/* V0.9.9 — main strategy map and overview dialog are independent. */
+/* V0.10.0 — main strategy map and overview dialog are independent. */
 body.v082-map .v082-side{display:none!important}
 body.v082-map .v082-top{z-index:12}
 body.v082-map .v082-bottom{z-index:13;gap:4px;padding:5px 8px max(5px,env(safe-area-inset-bottom));}
@@ -315,7 +315,7 @@ body.v082-map .v089-main-sheet{bottom:calc(var(--v091-bottom-height,177px) + 4px
 #mapDialog .v090-dialog-tabs{display:none!important}
 @media(max-width:375px){body.v082-map .v091-main-nav button{min-height:40px}body.v082-map .v082-bottom{gap:2px}}
 
-/* V0.9.9: main strategy map only — eliminate exposed canvas caused by artificial 90/105px scroll margins. */
+/* V0.10.0: main strategy map only — eliminate exposed canvas caused by artificial 90/105px scroll margins. */
 body.v082-map .sengoku-hero-map .map-zoom-surface{
  margin:0!important;padding:0!important;display:block!important;min-height:0!important;
  box-sizing:border-box!important;overflow:visible!important;
@@ -326,14 +326,14 @@ body.v082-map .sengoku-hero-map{
 }
 body.v082-map .sengoku-hero-map .map-scene{display:block!important;width:100%!important;height:auto!important;}
 </style><style id="v093-label-style">
-/* V0.9.9 unified castle caption visibility in every map viewport */
+/* V0.10.0 unified castle caption visibility in every map viewport */
 .map-scene .map-node .city-caption{display:none!important}
 .map-scene .map-node.hq-node .city-caption{display:block!important}
 body.v093-selected .map-scene .map-node.selected .city-caption{display:block!important}
 .map-scene .map-node .city-troops{display:none!important}
 .map-scene .province-label{pointer-events:none!important}
 
-/* V0.9.9: selected labels and permanent faction headquarters */
+/* V0.10.0: selected labels and permanent faction headquarters */
 body.v082-map .map-node .city-caption{display:none!important;pointer-events:none}
 body.v082-map .map-node.hq-node .city-caption,body.v093-selected .map-node.selected .city-caption{display:block!important}
 body.v082-map .map-zoom-surface[data-detail="overview"] .minor-node.selected{display:block!important}
@@ -342,8 +342,8 @@ body.v082-map .province-label{pointer-events:none}
 body.v082-map .province-label text{font-family:serif;font-weight:800}
 body.v082-map .map-node .city-troops{display:none!important}
 </style>
-</head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.9.9 直向操作修正版</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
-<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.9.9<br>使用地圖上方拉桿縮放，點擊城池顯示所屬令制國名。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
+</head><body><header><h1>⚔ 戰國群雄錄 ⚔</h1><small>V0.10.0 直向操作修正版</small></header><main id="game"></main><nav id="uiTabs" class="ui-tabs" aria-label="遊戲功能選單"></nav><div id="officerBioDialog" role="dialog" aria-modal="true" aria-label="武將人物列傳" hidden></div><div id="battleOverlay" class="ui-battle-overlay" hidden role="dialog" aria-modal="true" aria-label="戰鬥結果"><div class="ui-battle-card" id="battleResult"></div></div><button class="map-fab" type="button" onclick="openMap()" aria-label="隨時開啟戰略地圖">🗾 地圖</button><button class="turn-fab" id="turnFab" type="button" onclick="confirmEndTurn()" aria-label="確認結束目前回合">⏳ 結束回合</button>
+<div id="ukiyoSettings" hidden role="dialog" aria-modal="true" aria-label="遊戲設定"><div class="ukiyo-settings-card"><h2>⚙ 遊戲設定</h2><p>戰國群雄錄 V0.10.0<br>使用地圖上方拉桿縮放，點擊城池顯示所屬令制國名。縮小時只顯示各家本據城。</p><p>城池位置與道路為美術圖上的示意配置，尚未逐城校準。今川與松平的從屬暫以同盟處理；新增城主姓名尚未完整串接武將能力。</p><button type="button" onclick="importOldSave()">匯入 V0.7 舊進度（保留原存檔）</button><button type="button" onclick="save();alert('遊戲進度已儲存')">💾 儲存目前進度</button><button type="button" onclick="closeUkiyoSettings()">返回遊戲</button></div></div><div id="mapDialog" class="map-dialog" role="dialog" aria-modal="true" aria-label="戰略地圖" aria-hidden="true">
  <div class="map-dialog-header"><strong id="mapEra">戰略地圖</strong><button id="mapClose" type="button" onclick="closeMap()">✕ 關閉</button></div>
  <div id="mapDialogControls"></div><div class="map-dialog-body"><div id="mapCanvas"></div></div>
  <div class="map-dialog-footer"><p id="mapSelection">請點選城池</p></div><section id="v089CitySheet" class="v089-sheet" hidden aria-label="城池資訊"></section>
@@ -575,7 +575,7 @@ function selectCity(id){
   v089ShowSheet(id,true);
   if(camera&&viewport){
    viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y;
-   requestAnimationFrame(()=>{if(mapIsOpen){viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y;}});
+   requestAnimationFrame(()=>{if(mapIsOpen){viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y;v100ScheduleCastleFocus(id,true);}});
   }
   // The road overlay depends on the selected city, but only redraw it if
   // the player changes the map mode explicitly; never reset the viewport here.
@@ -981,7 +981,7 @@ function setMapZoom(value){
  document.querySelectorAll('.map-guide').forEach(el=>el.textContent=(mapZoom<.8?'總覽：僅顯示各勢力本據城。':mapZoom<1.2?'中景：全部城池建築與本據城名稱。':'近景：本據城常駐名稱，點擊其他城池顯示名稱與國名。')+' 拖曳或滑動可移動地圖。');
 }
 
-// V0.9.9: adaptive province plaque placement in map coordinates.
+// V0.10.0: adaptive province plaque placement in map coordinates.
 // Castle coordinates and saved data are never changed.
 function v097ProvinceMarkup(region){
  if(!region||!v093HasSelection)return '';
@@ -1127,7 +1127,42 @@ function uiSwitch(screen, preservePosition=false){
  });
  if(!preservePosition)window.scrollTo({top:0,behavior:'instant'});
 }
-function uiSelectCity(id){const viewport=document.querySelector('.sengoku-hero-map');const camera=viewport?{x:viewport.scrollLeft,y:viewport.scrollTop}:null;g.selected=id;v093HasSelection=true;document.body.classList.add('v093-selected');save();document.querySelectorAll('.sengoku-hero-map .map-node').forEach(node=>node.classList.toggle('selected',Number(node.dataset.cityId)===Number(id)));v093UpdateMapSelection(viewport);v089ShowSheet(id,false);if(camera&&viewport){viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y;requestAnimationFrame(()=>{viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y})}}
+
+// V0.10.0: only pan when the selected castle would be covered by its information sheet.
+// Coordinates are measured after layout, so this works at any zoom and on iOS Safari.
+function v100FocusSelectedCastle(id, inDialog=false){
+ const viewport=document.querySelector(inDialog?'#mapDialog .map-dialog-body':'.sengoku-hero-map');
+ const sheet=document.getElementById(inDialog?'v089CitySheet':'v089MainSheet');
+ if(!viewport||!sheet||sheet.hidden)return;
+ const node=[...viewport.querySelectorAll('.map-node')].find(n=>Number(n.dataset.cityId)===Number(id));
+ if(!node)return;
+ const art=node.querySelector('.castle-art')||node;
+ const label=node.querySelector('.city-caption');
+ const bounds=()=>{
+  const a=art.getBoundingClientRect();
+  if(!label)return a;
+  const b=label.getBoundingClientRect();
+  if(!b.width||!b.height)return a;
+  return {top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)};
+ };
+ const view=viewport.getBoundingClientRect(),panel=sheet.getBoundingClientRect();
+ const safeTop=view.top+20;
+ const safeBottom=Math.min(view.bottom,panel.top)-64;
+ if(safeBottom<=safeTop+40)return;
+ const target=bounds();
+ let dy=0;
+ if(target.bottom>safeBottom)dy=target.bottom-safeBottom;
+ else if(target.top<safeTop)dy=target.top-safeTop;
+ if(Math.abs(dy)<2)return;
+ const maxScroll=Math.max(0,viewport.scrollHeight-viewport.clientHeight);
+ const destination=Math.min(maxScroll,Math.max(0,viewport.scrollTop+dy));
+ if(Math.abs(destination-viewport.scrollTop)<2)return;
+ viewport.scrollTo({top:destination,left:viewport.scrollLeft,behavior:'smooth'});
+}
+function v100ScheduleCastleFocus(id,inDialog=false){
+ requestAnimationFrame(()=>requestAnimationFrame(()=>v100FocusSelectedCastle(id,inDialog)));
+}
+function uiSelectCity(id){const viewport=document.querySelector('.sengoku-hero-map');const camera=viewport?{x:viewport.scrollLeft,y:viewport.scrollTop}:null;g.selected=id;v093HasSelection=true;document.body.classList.add('v093-selected');save();document.querySelectorAll('.sengoku-hero-map .map-node').forEach(node=>node.classList.toggle('selected',Number(node.dataset.cityId)===Number(id)));v093UpdateMapSelection(viewport);v089ShowSheet(id,false);if(camera&&viewport){viewport.scrollLeft=camera.x;viewport.scrollTop=camera.y;}v100ScheduleCastleFocus(id,false)}
 let battlePhaseIndex=0;
 function uiDismissBattle(){document.getElementById('battleOverlay').hidden=true;battlePhaseIndex=0}
 function uiBattleNext(){battlePhaseIndex=Math.min(3,battlePhaseIndex+1);uiDrawBattlePhase()}
@@ -1176,7 +1211,7 @@ function uiEnhance(){
   const section=document.createElement('div');section.className='ui-screen';section.dataset.screen=name;game.appendChild(section);screens[name]=section;
  }
  const c=g.cities[g.selected],o=officer(c.officer),season=['春','夏','秋','冬'][(g.turn-1)%4],year=(g.startYear||1546)+Math.floor((g.turn-1)/4);
- screens.map.innerHTML=`<div class="v082-top"><strong>戰國群雄錄 <small>V0.9.9</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><section id="v089MainSheet" class="v089-sheet v089-main-sheet" hidden aria-label="城池資訊"></section><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button><nav class="v091-main-nav" aria-label="遊戲功能導覽"><button type="button" class="active" onclick="uiSwitch('map')">🗾<span>地圖</span></button><button type="button" onclick="uiSwitch('domestic')">🏯<span>內政</span></button><button type="button" onclick="uiSwitch('military')">⚔<span>軍事</span></button><button type="button" onclick="uiSwitch('diplomacy')">🤝<span>外交</span></button><button type="button" onclick="uiSwitch('officers')">👥<span>武將</span></button></nav></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
+ screens.map.innerHTML=`<div class="v082-top"><strong>戰國群雄錄 <small>V0.10.0</small></strong><span>${year}年 ${season} · 第${g.turn}回合</span><span>⚔ 織田家　🪙 ${g.gold.toLocaleString()}　🌾 ${g.rice.toLocaleString()}　⚑ ${g.cities.filter(c=>c.owner==="織田").reduce((a,c)=>a+c.troops,0).toLocaleString()} <button onclick="openUkiyoSettings()">⚙</button></span></div><div class="sengoku-hero"><div class="sengoku-hero-top"><strong>天下布武 · 戰略圖</strong><small>${year}年 ${season} · 第${g.turn}回合</small></div><div id="heroMapControls">${mapModeControls()}</div><div class="sengoku-hero-map">${mapMarkup(year,season).replaceAll('onclick="selectCity(','onclick="uiSelectCity(')}</div><div class="sengoku-hero-foot"><span>點選城池即可進入城池管理</span><button onclick="openMap()">⛶ 全螢幕</button></div></div><section id="v089MainSheet" class="v089-sheet v089-main-sheet" hidden aria-label="城池資訊"></section><div class="v082-bottom"><div class="v082-controls">${mapModeControls()}</div><button class="v082-end" onclick="confirmEndTurn()">結束回合</button><nav class="v091-main-nav" aria-label="遊戲功能導覽"><button type="button" class="active" onclick="uiSwitch('map')">🗾<span>地圖</span></button><button type="button" onclick="uiSwitch('domestic')">🏯<span>內政</span></button><button type="button" onclick="uiSwitch('military')">⚔<span>軍事</span></button><button type="button" onclick="uiSwitch('diplomacy')">🤝<span>外交</span></button><button type="button" onclick="uiSwitch('officers')">👥<span>武將</span></button></nav></div><div class="ui-city-summary"><div class="ui-portrait"><span class="crest">⚔</span><span class="portrait-name">${o.n}</span></div><div><strong>🏯 ${c.name}城</strong><p>${c.owner}家 · 駐軍 ${c.troops.toLocaleString()}<br>城防 ${Math.round(c.def)} · 士氣 ${c.morale} · 城主 ${o.n}</p><button onclick="uiSwitch('domestic')">管理此城 →</button></div></div><div class="ui-screen-title">📜 戰國紀事</div>`;
  screens.map.appendChild(chronicle);
  const citySummary=document.createElement('div');citySummary.innerHTML=cityDashboard(c);screens.domestic.appendChild(citySummary);
  // Reuse the existing castle section: split into functional cards while keeping original controls and IDs.
@@ -1230,7 +1265,7 @@ function render(){
 }
 
 
-// V0.9.9: measure the main-map toolbar rather than guessing its height.
+// V0.10.0: measure the main-map toolbar rather than guessing its height.
 function v091MeasureMainMap(){
  const bar=document.querySelector('.ui-screen[data-screen="map"] .v082-bottom');
  const screen=document.querySelector('.ui-screen[data-screen="map"]');
