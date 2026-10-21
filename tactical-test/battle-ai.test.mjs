@@ -1,0 +1,18 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {makeMap} from './battle-core.mjs';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+import {legalAiActions,chooseAiActivation,suggestAiMove} from './battle-ai.mjs';
+import {CARD_POOL,draftThree,chooseCard} from './battle-tactics.mjs';
+const fixture=()=>createTurnBattle({map:makeMap(),seed:'c4',units:[{id:'a',side:'attacker',type:'spear',soldiers:500,morale:80,q:1,r:1},{id:'b',side:'defender',type:'spear',soldiers:500,morale:80,q:5,r:1}],commanders:{attacker:'a',defender:'b'}});
+test('AI returns only current side eligible activation',()=>{const s=fixture();assert.deepEqual(legalAiActions(s,'defender'),[]);assert.equal(legalAiActions(s,'attacker')[0].unitId,'a');});
+test('AI refuses missing knowledge',()=>assert.throws(()=>chooseAiActivation(fixture(),'attacker',null),/INVALID_KNOWLEDGE/));
+test('AI can select eligible unit without revealing hidden enemy',()=>{const s=fixture();assert.equal(chooseAiActivation(s,'attacker',{side:'attacker',visibleEnemyIds:[]}).unitId,'a');});
+test('AI does not chase invisible enemies',()=>assert.equal(suggestAiMove(fixture(),'a',{side:'attacker',visibleEnemyIds:[]}),null));
+test('AI suggests legal move toward visible enemy',()=>{const s=fixture(),m=suggestAiMove(s,'a',{side:'attacker',visibleEnemyIds:['b']});assert.ok(m?.path.length);const r=turnDispatch(s,{id:'activate',type:'ACTIVATE_UNIT',unitId:'a',side:'attacker',expectedRevision:s.revision});assert.ok(r.ok);});
+test('AI decision is deterministic',()=>{const s=fixture(),k={side:'attacker',visibleEnemyIds:['b']};assert.deepEqual(chooseAiActivation(s,'attacker',k),chooseAiActivation(s,'attacker',k));});
+test('AI never mutates battle state',()=>{const s=fixture(),before=structuredClone(s);chooseAiActivation(s,'attacker',{side:'attacker',visibleEnemyIds:['b']});suggestAiMove(s,'a',{side:'attacker',visibleEnemyIds:['b']});assert.deepEqual(s,before);});
+test('card pool has exactly 28 cards',()=>assert.equal(CARD_POOL.length,28));
+test('draft has three unique cards',()=>{const d=draftThree('a');assert.equal(d.length,3);assert.equal(new Set(d.map(c=>c.id)).size,3);});
+test('draft reproducible by seed',()=>assert.deepEqual(draftThree('seed'),draftThree('seed')));
+test('draft respects available groups',()=>assert.ok(draftThree('x',['common']).every(c=>c.group==='common')));
+test('card choice rejects card outside offer',()=>assert.throws(()=>chooseCard(draftThree('x'),'unknown'),/CARD_NOT_OFFERED/));

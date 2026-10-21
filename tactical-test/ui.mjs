@@ -1,0 +1,56 @@
+import {makeMap,reachable,hexDistance} from './battle-core.mjs';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+import {validateAttack} from './battle-combat.mjs';
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
+const labels={spear:'槍足輕',cavalry:'騎馬隊',bow:'弓足輕',gun:'鐵砲隊'};
+const names={a1:'織田信長',a2:'柴田勝家',a3:'森可成',d1:'今川義元',d2:'岡部元信',d3:'朝比奈泰朝'};
+const unit=(id,side,type,q,r)=>({id,side,type,q,r,soldiers:500,morale:80});
+const map=makeMap(10,10);
+for(let r=0;r<10;r++)for(let q=0;q<10;q++){
+  const cell=map.cells[`${q},${r}`];
+  if((q===4&&r>=1&&r<=3)||(q===6&&r>=6&&r<=8))cell.terrain='forest';
+  if((q===5&&r===1)||(q===4&&r===7)||(q===5&&r===7))cell.terrain='hill';
+  if(q===5&&r===8)cell.terrain='mountain';
+}
+const initial={map,seed:'D1-PLAYABLE-01',units:[unit('a1','attacker','spear',1,4),unit('a2','attacker','cavalry',1,6),unit('a3','attacker','bow',1,2),unit('d1','defender','spear',8,4),unit('d2','defender','gun',8,6),unit('d3','defender','bow',8,2)],commanders:{attacker:'a1',defender:'d1'},objectives:[{id:'central',q:5,r:4}],exits:{attacker:[{id:'west',q:0,r:4}],defender:[{id:'east',q:9,r:4}]}};
+let state,selected=null,mode=null,commandNumber=0,logLines=[];
+const sideName=s=>s==='attacker'?'攻方':'守方';
+const unitById=id=>state.units.find(u=>u.id===id);
+function msg(s){$('help').textContent=s;}
+function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}，造成 ${e.loss} 人損失`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
+function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();return true;}
+const xy=(q,r)=>({x:45+54*q+27*r,y:52+49*r});
+const polygon=(x,y,rad=32)=>Array.from({length:6},(_,i)=>{const a=(Math.PI/180)*(60*i-30);return `${(x+rad*Math.cos(a)).toFixed(2)},${(y+rad*Math.sin(a)).toFixed(2)}`;}).join(' ');
+function svgEl(tag,attrs={},parent=$('map')){const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));parent.append(el);return el;}
+function reachableFor(u){return u&&state.activation?.unitId===u.id&&!state.activation.moved&&state.phase==='ACTIVE'?reachable(u,state):[];}
+function targetsFor(u){return u&&state.activation?.unitId===u.id&&!state.activation.mainUsed&&state.phase==='ACTIVE'?state.units.filter(t=>t.side!==u.side&&validateAttack(state,u.id,t.id).ok):[];}
+function render(){const svg=$('map');svg.replaceChildren();$('round').textContent=`第 ${state.round} 輪`;const active=state.activation;$('turn').textContent=active?`${sideName(active.side)} · ${names[active.unitId]}`:`${sideName(state.nextSide)}待命`;$('phase').textContent=state.phase==='REACTION_PENDING'?'⚠ 反應待決':state.phase==='TACTICAL_FINISHED'?'戰鬥結束':'戰鬥中';
+ const u=unitById(selected),reach=mode==='move'?reachableFor(u):[],targets=mode==='attack'?targetsFor(u):[];
+ const rkeys=new Set(reach.map(h=>`${h.hex.q},${h.hex.r}`)),tkeys=new Set(targets.map(t=>`${t.q},${t.r}`));
+ for(let r=0;r<10;r++)for(let q=0;q<10;q++){const {x,y}=xy(q,r),terrain=state.map.cells[`${q},${r}`].terrain;const color={plain:'#81946c',forest:'#476a50',hill:'#ad9a6b',mountain:'#777a79'}[terrain]||'#81946c';const p=svgEl('polygon',{points:polygon(x,y),fill:color,class:`hex ${selected&&u?.q===q&&u?.r===r?'selected':''} ${rkeys.has(`${q},${r}`)?'reachable':''} ${tkeys.has(`${q},${r}`)?'target':''}`});p.addEventListener('click',()=>clickHex(q,r));}
+ for(const o of state.objectives){const {x,y}=xy(o.q,o.r);const t=svgEl('text',{x,y:y+7,class:'obj'});t.textContent='⚑';}
+ for(const v of state.units){if(v.withdrawn||v.q==null)continue;const {x,y}=xy(v.q,v.r),g=svgEl('g',{class:'unit'});svgEl('circle',{cx:x,cy:y,r:22,fill:v.side==='attacker'?'#315d9c':'#a14440',opacity:v.soldiers>0?1:.45},g);const t=svgEl('text',{x,y:y-1},g);t.textContent={spear:'槍',cavalry:'騎',bow:'弓',gun:'鐵'}[v.type];const n=svgEl('text',{x,y:y+12,'font-size':'9'},g);n.textContent=String(v.soldiers);if(v.id===selected)svgEl('circle',{cx:x,cy:y,r:25,fill:'none',stroke:'#ffe6a4','stroke-width':3},g);}
+ $('unitInfo').innerHTML=u?`<div class="unit-title">${names[u.id]} · ${labels[u.type]}</div><div>${sideName(u.side)}｜兵力 ${u.soldiers}/500｜士氣 ${u.morale}</div><div class="muted">座標 ${u.q},${u.r}｜${u.routed?'潰走':u.activatedThisRound?'本輪已啟動':'待命'}${u.type==='gun'?`｜鐵砲 ${u.gunState==='UNLOADED'?'未裝填':'已裝填'}`:''}</div>`:'點選任一部隊查看資訊';
+ $('log').replaceChildren(...logLines.slice(0,24).map(t=>{const e=document.createElement('div');e.textContent=t;return e;}));
+ const own=u?.side===(active?.side??state.nextSide),valid=state.phase==='ACTIVE';
+ $('activate').disabled=!valid||!!active||!own||!u||u.activatedThisRound||u.routed||u.soldiers<=0;
+ $('move').disabled=!valid||!active||active.unitId!==selected||active.moved;
+ $('attack').disabled=!valid||!active||active.unitId!==selected||active.mainUsed||!targetsFor(u).length;
+ $('reload').disabled=!valid||!active||active.unitId!==selected||active.mainUsed||active.moved||u?.type!=='gun'||u.gunState!=='UNLOADED';
+ $('end').disabled=!valid||!active;
+ $('pass').disabled=state.phase!=='REACTION_PENDING';
+ for(const name of ['move','attack'])$(name).classList.toggle('active',mode===name);
+}
+function clickHex(q,r){if(state.phase==='TACTICAL_FINISHED')return;const unit=state.units.find(u=>u.q===q&&u.r===r&&!u.withdrawn&&u.soldiers>0);const selectedUnit=unitById(selected);
+ if(mode==='move'&&selectedUnit){const entry=reachableFor(selectedUnit).find(v=>v.hex.q===q&&v.hex.r===r);if(entry){if(send('MOVE_UNIT',{unitId:selected,path:entry.path})){mode=null;msg(state.phase==='REACTION_PENDING'?'請處理敵軍反應。':'移動完成，可選擇攻擊或結束行動。');}return;} }
+ if(mode==='attack'&&selectedUnit&&unit&&unit.side!==selectedUnit.side){if(send('ATTACK_UNIT',{unitId:selected,targetId:unit.id})){mode=null;msg('攻擊已結算，請結束部隊行動。');}return;}
+ if(unit){selected=unit.id;mode=null;msg(unit.side===state.nextSide?'可啟動此部隊。':'已選取部隊。');render();}else{mode=null;render();}}
+$('activate').onclick=()=>{if(send('ACTIVATE_UNIT',{unitId:selected}))msg('選擇「移動」或「攻擊」，也可以直接結束行動。');};
+$('move').onclick=()=>{mode='move';msg('點選黃色外框格子即可沿合法路徑移動。');render();};
+$('attack').onclick=()=>{mode='attack';msg('點選紅色外框敵軍即可攻擊。');render();};
+$('reload').onclick=()=>{if(send('RELOAD_GUN',{unitId:selected}))msg('鐵砲已裝填，請結束部隊行動。');};
+$('end').onclick=()=>{if(send('END_ACTIVATION')){mode=null;selected=null;msg('輪到下一方。請選擇該方部隊。');render();}};
+$('pass').onclick=()=>{if(state.pending?.window){const reactUnit=state.units.find(u=>u.id===state.pending.window.candidates[0]?.unitId);if(send('PASS_REACTION',{windowId:state.pending.window.id},reactUnit?.side)){mode=null;msg('已放棄反應。');}}};
+$('reset').onclick=()=>{if(!confirm('確定重新開始示範戰役？'))return;reset();};
+function reset(){state=createTurnBattle(initial);selected=null;mode=null;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('先點選藍色部隊，再按「啟動部隊」。');render();}
+reset();
