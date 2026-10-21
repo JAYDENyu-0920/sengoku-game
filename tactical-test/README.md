@@ -10,3 +10,6 @@
 - `node --test *.test.mjs`：144 項通過（含新增 7 項天候回歸測試）。
 
 此版本通過 Node 自動化測試，尚未完成 iPhone Safari 實機驗收。
+
+
+D8-A2.4: Cavalry attacks against spear units now pause before damage for a 1-order phalanx (-30%) or pass decision. AI uses the defense if affordable.

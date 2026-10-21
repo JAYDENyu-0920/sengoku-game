@@ -41,7 +41,17 @@ function canPick(u){return !!u&&canSelectWithoutActivation(state,u.id,PLAYER_SID
 function reachableFor(u){return u&&state.phase==='ACTIVE'&&((state.activation?.unitId===u.id&&!state.activation.moved&&!state.activation.mainUsed)||canPick(u))?reachable(u,state):[];}
 function commitSelection(){if(!state.activation&&selected&&canPick(unitById(selected)))return send('ACTIVATE_UNIT',{unitId:selected},PLAYER_SIDE);return state.activation?.unitId===selected;}
 function targetsFor(u){if(!u||state.phase!=='ACTIVE'||!(state.activation?.unitId===u.id&&!state.activation.mainUsed||canPick(u)))return [];const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;return probe.units.filter(t=>t.side!==u.side&&validateAttack(probe,u.id,t.id).ok);}
+function playerDefense(){return state.phase==='DEFENSE_PENDING'&&state.defensePending?.defenderSide===PLAYER_SIDE;}
 function playerReaction(){return state.phase==='REACTION_PENDING'&&state.pending?.window?.candidates?.some(c=>unitById(c.unitId)?.side===PLAYER_SIDE);}
+function renderDefense(){
+ const dialog=$('defenseDialog');if(!dialog)return;
+ if(!playerDefense()){dialog.hidden=true;return;}
+ const p=state.defensePending;dialog.hidden=false;
+ $('defenseInfo').textContent=`${names[p.targetId]||p.targetId} 遭騎兵攻擊！可花費 1 軍令發動槍衾，本次減傷 30%；或不使用。`;
+ $('defenseChoose').disabled=(state.orders?.attacker??0)<1;
+}
+$('defenseChoose').onclick=()=>{if(playerDefense())send('CHOOSE_DEFENSE',{windowId:state.defensePending.id,skillId:'phalanx'},PLAYER_SIDE);};
+$('defensePass').onclick=()=>{if(playerDefense())send('PASS_DEFENSE',{windowId:state.defensePending.id},PLAYER_SIDE);};
 function renderReaction(){
  const dialog=$('reactionDialog');if(!playerReaction()){dialog.hidden=true;return;}
  const win=state.pending.window,mover=unitById(state.pending.unitId);dialog.hidden=false;
@@ -54,7 +64,7 @@ function renderReaction(){
  }
 }
 $('reactionPass').onclick=()=>{if(!playerReaction())return;const windowId=state.pending.window.id;if(send('PASS_REACTION',{windowId},PLAYER_SIDE)){preview=null;mode=null;msg('已放棄本次反應，保留未使用部隊的反應機會。');}};
-function render(){const svg=$('map');svg.replaceChildren();$('round').textContent=`第 ${state.round} 輪`; $('weather').textContent=`天候：${weatherRule(state).name}｜鐵砲射程 2～${weatherRule(state).gunMax}`; $('orders').textContent=`軍令 ${state.orders?.attacker??3}/5`;const active=state.activation;$('turn').textContent=active?`${sideName(active.side)} · ${names[active.unitId]}`:`${sideName(state.nextSide)}待命`;$('remaining').textContent=`${sideName(active?.side??state.nextSide)}尚可行動 ${remainingUnits(state).length} 隊`; $('phase').textContent=state.phase==='REACTION_PENDING'?'⚠ 反應待決':state.phase==='TACTICAL_FINISHED'?'戰鬥結束':'戰鬥中';
+function render(){const svg=$('map');svg.replaceChildren();$('round').textContent=`第 ${state.round} 輪`; $('weather').textContent=`天候：${weatherRule(state).name}｜鐵砲射程 2～${weatherRule(state).gunMax}`; $('orders').textContent=`軍令 ${state.orders?.attacker??3}/5`;const active=state.activation;$('turn').textContent=active?`${sideName(active.side)} · ${names[active.unitId]}`:`${sideName(state.nextSide)}待命`;$('remaining').textContent=`${sideName(active?.side??state.nextSide)}尚可行動 ${remainingUnits(state).length} 隊`; $('phase').textContent=state.phase==='DEFENSE_PENDING'?'⚠ 槍衾防禦待決':state.phase==='REACTION_PENDING'?'⚠ 反應待決':state.phase==='TACTICAL_FINISHED'?'戰鬥結束':'戰鬥中';
  if(selected){const chosen=unitById(selected);if(!chosen||chosen.withdrawn||chosen.routed||chosen.soldiers<=0){selected=null;selectedSkill=null;preview=null;mode=null;}}
  const u=unitById(selected),reach=mode==='move'?reachableFor(u):[],targets=mode==='attack'?targetsFor(u):[];
  const rkeys=new Set(reach.map(h=>`${h.hex.q},${h.hex.r}`)),tkeys=new Set(targets.map(t=>`${t.q},${t.r}`));
@@ -68,7 +78,7 @@ function render(){const svg=$('map');svg.replaceChildren();$('round').textConten
  $('reload').hidden=true;
  $('end').disabled=!valid||!(active?.side===PLAYER_SIDE||canPick(u));
  $('pass').hidden=true; // D7: reaction is handled by a dedicated dialog.
- renderReaction();
+ renderReaction();renderDefense();
  $('attack').classList.toggle('active',mode==='attack');
 }
 function chooseUnit(unit){selectedSkill=null;
@@ -82,7 +92,7 @@ function chooseUnit(unit){selectedSkill=null;
 }
 function openAttack(target){pendingTarget=target.id;const u=unitById(selected);const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;const e=estimateAttack(probe,selected,target.id);$('attackPreview').textContent=e.ok?`${names[selected]} → ${names[target.id]}\n預估損失 ${Math.floor(e.min*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))}～${Math.floor(e.max*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))} 人\n敵軍剩餘兵力依戰法加成重新結算\n${e.matchup}（非保證傷害）${selectedSkill?'\n戰法：'+SKILLS[selectedSkill].name+'｜軍令 -'+SKILLS[selectedSkill].cost:''}`:`無法攻擊：${e.error}`;$('confirmAttack').disabled=!e.ok;$('attackConfirm').hidden=false;}
 function clickHex(q,r){
- if(state.phase==='TACTICAL_FINISHED'||state.phase==='REACTION_PENDING'||aiBusy||state.nextSide===AI_SIDE&&!state.activation)return;
+ if(state.phase==='TACTICAL_FINISHED'||state.phase==='REACTION_PENDING'||state.phase==='DEFENSE_PENDING'||aiBusy||state.nextSide===AI_SIDE&&!state.activation)return;
  const unit=state.units.find(u=>u.q===q&&u.r===r&&!u.withdrawn&&u.soldiers>0),u=unitById(selected);
  if(mode==='move'&&u){const entry=reachableFor(u).find(v=>v.hex.q===q&&v.hex.r===r);if(entry){preview=stageMove(virtualActivation(u),selected,entry);msg('暫定移動：可再點其他格子，或按「取消移動」。攻擊或結束行動時才提交。');render();return;}}
  if(unit&&u&&unit.side!==u.side&&(state.activation?.unitId===u.id||canPick(u))&&targetsFor(u).some(t=>t.id===unit.id)){openAttack(unit);return;}
@@ -125,6 +135,7 @@ $('reset').onclick=()=>{if(!confirm('確定返回戰前編制？目前戰鬥進�
 function reset(){chosenWeather=$('weatherSelect')?.value??'sun';selectedSkill=null;aiBusy=false;aiScheduled=false;state=createTurnBattle({...buildFormationSnapshot(initial,formation),weather:chosenWeather});selected=null;mode=null;pendingTarget=null;preview=null;$('attackConfirm').hidden=true;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('點選藍色部隊自由切換，黃色格子可暫定移動；紅色由普通 AI 操作。');render();}
 // AI plays only the red defender; one command per timer tick keeps Safari responsive.
 function queueAi(){if(aiScheduled||aiBusy||state.phase==='TACTICAL_FINISHED')return;
+ if(state.phase==='DEFENSE_PENDING'){if(state.defensePending.defenderSide===AI_SIDE){aiScheduled=true;setTimeout(aiStep,220);}return;}
  const reaction=state.phase==='REACTION_PENDING';
  const reactSide=reaction?unitById(state.pending?.window?.candidates?.[0]?.unitId)?.side:null;
  if(!(reaction&&reactSide===AI_SIDE||!reaction&&(state.activation?.side??state.nextSide)===AI_SIDE))return;
@@ -132,7 +143,8 @@ function queueAi(){if(aiScheduled||aiBusy||state.phase==='TACTICAL_FINISHED')ret
 }
 function aiStep(){aiScheduled=false;if(state.phase==='TACTICAL_FINISHED')return;aiBusy=true;
  try{
-  if(state.phase==='REACTION_PENDING'){
+  if(state.phase==='DEFENSE_PENDING'){const p=state.defensePending;if(p.defenderSide===AI_SIDE)send((state.orders?.defender??0)>=1?'CHOOSE_DEFENSE':'PASS_DEFENSE',{windowId:p.id,...((state.orders?.defender??0)>=1?{skillId:'phalanx'}:{})},AI_SIDE);}
+  else if(state.phase==='REACTION_PENDING'){
    const candidates=state.pending.window.candidates;const c=candidates.find(c=>unitById(c.unitId)?.side===AI_SIDE);
    if(c){const target=unitById(state.pending.window.moverId??state.activation?.unitId);
     const choice=candidates.find(x=>unitById(x.unitId)?.side===AI_SIDE&&target&&validateAttack(state,x.unitId,target.id).ok);

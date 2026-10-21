@@ -1,6 +1,6 @@
 import {reloadAtRoundStart} from './battle-weather.mjs';
 /** B1 V4.0-C3 tactical turn controller. Pure state transitions, no overworld mutations. */
-import {createCombatBattle,combatDispatch,moraleState} from './battle-combat.mjs';
+import {createCombatBattle,combatDispatch,moraleState,validateAttack} from './battle-combat.mjs';
 import {MOVEMENT,hexDistance} from './battle-core.mjs';
 import {checkSkill,START_ORDERS,MAX_ORDERS,ROUND_RECOVERY} from './battle-skills.mjs';
 const SIDES=['attacker','defender'];
@@ -56,6 +56,23 @@ export function turnDispatch(state,cmd){
   if(cmd.expectedRevision!==state.revision)return error(state,'STALE_REVISION');
   if(state.phase==='TACTICAL_FINISHED')return error(state,'BATTLE_FINISHED');
   const s=clone(state);const side=cmd.side;
+  // D8-A2.4: incoming cavalry attack on spear creates a defensive decision before RNG/damage.
+  if(s.phase==='DEFENSE_PENDING'){
+    if(!['CHOOSE_DEFENSE','PASS_DEFENSE'].includes(cmd.type))return error(state,'DEFENSE_REQUIRED');
+    const pending=s.defensePending;
+    if(side!==pending.defenderSide||cmd.windowId!==pending.id)return error(state,'WRONG_DEFENSE_SIDE');
+    const use=cmd.type==='CHOOSE_DEFENSE';
+    if(use&&(cmd.skillId!=='phalanx'||s.orders[side]<1))return error(state,'INSUFFICIENT_ORDERS');
+    if(use){s.orders[side]--;s.defenseReaction={targetId:pending.targetId};event(s,cmd.id,'SKILL_USED',{unitId:pending.targetId,skillId:'phalanx',cost:1});}
+    s.phase='ACTIVE';s.defensePending=null;
+    const r=combatDispatch(s,{...pending.attack,id:cmd.id,expectedRevision:s.revision});
+    if(!r.ok)return error(state,r.error);
+    const n=r.state;delete n.defenseReaction;n.activation.mainUsed=true;
+    if(pending.skillId){const sk=checkSkill(n,{skillId:pending.skillId,unitId:pending.attackerId,targetId:pending.targetId});if(sk.ok){n.orders[pending.attackerSide]-=sk.skill.cost;event(n,cmd.id,'SKILL_USED',{unitId:pending.attackerId,skillId:pending.skillId,cost:sk.skill.cost});}}
+    event(n,cmd.id,use?'DEFENSE_SELECTED':'DEFENSE_PASSED',{unitId:pending.targetId});
+    assess(n,cmd.id);
+    return {ok:true,state:n,events:n.events.slice(state.events.length),paused:false};
+  }
   if(s.phase==='REACTION_PENDING'){
     if(!['CHOOSE_REACTION','PASS_REACTION'].includes(cmd.type))return error(state,'REACTION_REQUIRED');
     const reactSide=byId(s,s.pending.window.candidates[0]?.unitId)?.side;
@@ -93,6 +110,12 @@ export function turnDispatch(state,cmd){
       if(skill.kind==='attack'&&skill.id==='charge'&&(!a.moved||!u.movedThisActivation||!a.movedDistance||a.movedDistance<2))return error(state,'CHARGE_REQUIRES_TWO_STEPS');
     }
     const action=cmd.type==='USE_SKILL'?(skill.kind==='attack'?{...cmd,type:'ATTACK_UNIT',skillBonus:skill.bonus,skillId:skill.id}:{...cmd,type:'USE_GUARD',skillId:skill.id}):cmd;
+    const target=byId(s,cmd.targetId);
+    if(action.type==='ATTACK_UNIT'&&u.type==='cavalry'&&target?.type==='spear'&&target.soldiers>0&&!target.routed&&validateAttack(s,u.id,target.id).ok){
+      s.phase='DEFENSE_PENDING';s.defensePending={id:`defense:${cmd.id}`,attack:action,targetId:target.id,defenderSide:target.side,attackerId:u.id,attackerSide:side,skillId:skill?.id??null};
+      event(s,cmd.id,'DEFENSE_OPENED',{unitId:target.id,attackerId:u.id});s.revision++;s.committedCommands.push(cmd.id);
+      return {ok:true,state:s,events:s.events.slice(state.events.length),paused:true};
+    }
     const r=skill?.kind==='stance'?{ok:true,state:s,events:[]}:combatDispatch(s,action);if(!r.ok)return error(state,r.error);
     const n=r.state;if(skill){n.orders[side]-=skill.cost;if(skill.kind==='stance')n.units.find(x=>x.id===u.id).guardUntilRound=n.round+1;n.events.push({sequence:n.events.length+1,commandId:cmd.id,type:'SKILL_USED',unitId:u.id,skillId:skill.id,cost:skill.cost});if(skill.kind==='stance'){n.revision++;n.committedCommands.push(cmd.id);}}
     if(cmd.type==='MOVE_UNIT'){n.activation.moved=true;n.activation.movedDistance=(cmd.path??[]).length;}else n.activation.mainUsed=true;

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+import {makeMap} from './battle-core.mjs';
+const snapshot=()=>({map:makeMap(10,10),seed:'phalanx',damageScale:2.7,units:[{id:'c',side:'attacker',type:'cavalry',q:2,r:2,soldiers:500,morale:80},{id:'s',side:'defender',type:'spear',q:3,r:2,soldiers:500,morale:80}],commanders:{attacker:'c',defender:'s'}});
+const run=(s,id,type,side,extra={})=>turnDispatch(s,{id,type,side,expectedRevision:s.revision,...extra});
+function pending(){let s=createTurnBattle(snapshot());s=run(s,'a','ACTIVATE_UNIT','attacker',{unitId:'c'}).state;const r=run(s,'b','ATTACK_UNIT','attacker',{unitId:'c',targetId:'s'});assert.equal(r.ok,true);assert.equal(r.state.phase,'DEFENSE_PENDING');assert.equal(r.state.units[1].soldiers,500);return r.state;}
+test('phalanx is offered before damage and costs one defender order',()=>{const s=pending();const r=run(s,'c','CHOOSE_DEFENSE','defender',{windowId:s.defensePending.id,skillId:'phalanx'});assert.equal(r.ok,true);assert.equal(r.state.orders.defender,2);assert.equal(r.state.phase,'ACTIVE');assert.equal(r.state.activation.mainUsed,true);assert.ok(r.events.some(e=>e.type==='ATTACK_RESOLVED'));});
+test('passing defense costs no order and yields more casualties',()=>{const s=pending();const a=run(s,'c','CHOOSE_DEFENSE','defender',{windowId:s.defensePending.id,skillId:'phalanx'});const b=run(s,'d','PASS_DEFENSE','defender',{windowId:s.defensePending.id});assert.equal(b.ok,true);assert.equal(b.state.orders.defender,3);assert.ok(a.state.units[1].soldiers>b.state.units[1].soldiers);});
+test('wrong side and invalid skill do not mutate pending defense',()=>{const s=pending();assert.equal(run(s,'x','CHOOSE_DEFENSE','attacker',{windowId:s.defensePending.id,skillId:'phalanx'}).ok,false);assert.equal(run(s,'y','CHOOSE_DEFENSE','defender',{windowId:s.defensePending.id,skillId:'guard'}).ok,false);assert.equal(s.phase,'DEFENSE_PENDING');});
