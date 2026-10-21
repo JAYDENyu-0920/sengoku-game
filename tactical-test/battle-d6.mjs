@@ -1,3 +1,5 @@
+import {gunRangeModifier} from './battle-weather.mjs';
+import {hexDistance} from './battle-core.mjs';
 /** D6 UI estimates mirror the current provisional C2 damage formula. No RNG consumed. */
 import {validateAttack,ATTACK,DEFENSE} from './battle-combat.mjs';
 import {matchupModifier,matchupLabel} from './battle-matchups.mjs';
@@ -9,7 +11,7 @@ export function estimateAttack(state,attackerId,targetId){
   const {attacker:a,target:b}=check;
   const officer=(state.officers?.[a.id]&&state.officers?.[b.id])?officerModifiers(state.officers[a.id],state.officers[b.id]).ratio:1;
   const cards=state.cardLoadouts?.[a.side]?attackCardModifier(state.cardLoadouts[a.side],a.type):1;
-  const raw=50*(state.damageScale??1)*ATTACK[a.type]*Math.sqrt(a.soldiers/500)/DEFENSE[b.type]*officer*cards*matchupModifier(a.type,b.type);
+  const raw=50*(state.damageScale??1)*ATTACK[a.type]*Math.sqrt(a.soldiers/500)/DEFENSE[b.type]*officer*cards*matchupModifier(a.type,b.type)*(a.type==='gun'?gunRangeModifier(hexDistance(a,b)):1)*((b.guardUntilRound??0)>=(state.round??1)?.8:1);
   const low=Math.min(b.soldiers,Math.max(0,Math.floor(raw*.9)));
   const high=Math.min(b.soldiers,Math.max(0,Math.floor(raw*1.1)));
   return {ok:true,min:low,max:high,remainingMin:Math.max(0,b.soldiers-high),remainingMax:Math.max(0,b.soldiers-low),matchup:matchupLabel(a.type,b.type)};

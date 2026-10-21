@@ -1,4 +1,5 @@
 /** C8 headless deterministic AI battle driver. No strategic state writes. */
+import {weatherRule} from './battle-weather.mjs';
 import {turnDispatch} from './battle-turns.mjs';
 import {planAiActivation} from './battle-ai-c7.mjs';
 import {validateAttack} from './battle-combat.mjs';
@@ -24,7 +25,7 @@ export function runAutoBattle(snapshotOrState,{maxCommands=1500,difficulty='norm
       const enemies=knowledgeProvider(state,side).visibleEnemies;
       const target=(!state.activation.mainUsed&&unit&&alive(unit))?enemies.find(e=>validateAttack(state,unit.id,e.id).ok):null;
       if(target)cmd={...base,type:'ATTACK_UNIT',unitId:unit.id,targetId:target.id};
-      else if(unit?.type==='gun'&&unit.gunState==='UNLOADED'&&!state.activation.mainUsed&&!state.activation.moved)cmd={...base,type:'RELOAD_GUN',unitId:unit.id};
+      
       else if(unit&&!state.activation.moved&&enemies.length){
         const oldDistance=Math.min(...enemies.map(e=>hexDistance(unit,e)));
         const options=reachable(unit,state).filter(m=>m.path?.length).map(m=>({...m,nearest:Math.min(...enemies.map(e=>hexDistance(m.hex,e)))}))

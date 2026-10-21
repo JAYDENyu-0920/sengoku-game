@@ -1,4 +1,5 @@
 /** C7: bounded, deterministic action advisor. Only visible enemy snapshots may be used. */
+import {weatherRule} from './battle-weather.mjs';
 import {hexDistance, reachable} from './battle-core.mjs';
 import {RANGE,lineOfSight} from './battle-combat.mjs';
 const live=u=>u.soldiers>0&&!u.routed&&!u.withdrawn;
@@ -11,10 +12,10 @@ function validateKnowledge(side,k){
     ids.add(e.id);
   }
 }
-const rangeFor=t=>RANGE[t]??[0,0];
-function threatAt(hex,enemies){return enemies.reduce((v,e)=>{
+const rangeFor=(t,state)=>t==='gun'?[2,weatherRule(state).gunMax]:RANGE[t]??[0,0];
+function threatAt(hex,enemies,state){return enemies.reduce((v,e)=>{
   if(!live(e))return v;
-  const d=hexDistance(hex,e),[min,max]=rangeFor(e.type);
+  const d=hexDistance(hex,e),[min,max]=rangeFor(e.type,state);
   return v+(d>=min&&d<=max?Math.min(1,e.soldiers/500):0);
 },0);}
 /** No hidden state read: target choices come exclusively from knowledge.visibleEnemies. */
@@ -25,15 +26,15 @@ export function planAiActivation(state,side,knowledge,{difficulty='normal'}={}){
   const enemies=knowledge.visibleEnemies.filter(live);
   const candidates=[];
   for(const u of state.units.filter(u=>u.side===side&&live(u)&&!u.activatedThisRound)){
-    const attackTargets=enemies.filter(e=>{const d=hexDistance(u,e),[lo,hi]=rangeFor(u.type);return d>=lo&&d<=hi&&(u.type!=='gun'||(u.gunState!=='UNLOADED'&&!u.movedThisActivation))&&(d===1||lineOfSight(state.map,u,e,[...state.units.filter(x=>x.side===side),...enemies]));});
-    for(const target of attackTargets)candidates.push({unitId:u.id,side,action:'ATTACK_UNIT',targetId:target.id,score:100+Math.min(500,target.soldiers)/50-threatAt(u,enemies)*3,detail:'range-candidate'});
+    const attackTargets=enemies.filter(e=>{const d=hexDistance(u,e),[lo,hi]=rangeFor(u.type,state);return d>=lo&&d<=hi&&(u.type!=='gun'||(u.gunState!=='UNLOADED'&&!u.movedThisActivation))&&(d===1||lineOfSight(state.map,u,e,[...state.units.filter(x=>x.side===side),...enemies]));});
+    for(const target of attackTargets)candidates.push({unitId:u.id,side,action:'ATTACK_UNIT',targetId:target.id,score:100+Math.min(500,target.soldiers)/50-threatAt(u,enemies,state)*3,detail:'range-candidate'});
     const moves=reachable(u,state).filter(m=>m.path?.length).sort((a,b)=>a.cost-b.cost||a.hex.r-b.hex.r||a.hex.q-b.hex.q);
     const base=enemies.length?Math.min(...enemies.map(e=>hexDistance(u,e))):Infinity;
     for(const m of moves){
       const nearest=enemies.length?Math.min(...enemies.map(e=>hexDistance(m.hex,e))):Infinity;
       const advance=Number.isFinite(base)?base-nearest:0;
       if(advance<=0)continue;
-      const danger=threatAt(m.hex,enemies);
+      const danger=threatAt(m.hex,enemies,state);
       const penalty=difficulty==='easy'?0:difficulty==='normal'?3:6;
       candidates.push({unitId:u.id,side,action:'MOVE_UNIT',path:m.path,score:10+advance*4-m.cost*.2-danger*penalty,detail:'move-candidate'});
     }

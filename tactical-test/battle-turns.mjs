@@ -1,3 +1,4 @@
+import {reloadAtRoundStart} from './battle-weather.mjs';
 /** B1 V4.0-C3 tactical turn controller. Pure state transitions, no overworld mutations. */
 import {createCombatBattle,combatDispatch,moraleState} from './battle-combat.mjs';
 import {MOVEMENT,hexDistance} from './battle-core.mjs';
@@ -32,7 +33,7 @@ function roundEnd(s,id){
     }
     const delta=scores.attacker-scores.defender;finish(s,id,Math.abs(delta)<1e-9?null:delta>0?'attacker':'defender','ROUND_LIMIT');s.result.scores=scores;return;
   }
-  s.round++;for(const side of SIDES)s.orders[side]=Math.min(MAX_ORDERS,s.orders[side]+ROUND_RECOVERY);s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
+  s.round++;reloadAtRoundStart(s);for(const side of SIDES)s.orders[side]=Math.min(MAX_ORDERS,s.orders[side]+ROUND_RECOVERY);s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
   s.turnOrder=[];s.nextSide=s.firstSide;event(s,id,'ROUND_STARTED',{round:s.round});
 }
 function validateSnapshot(snapshot){
@@ -78,7 +79,7 @@ export function turnDispatch(state,cmd){
     if(!s.retreat[side].declared)return error(state,'RETREAT_NOT_DECLARED');
     const u=byId(s,cmd.unitId),exit=s.retreat[side].exits.find(h=>onHex(u,h));if(!exit)return error(state,'NOT_AT_EXIT');
     u.withdrawn=true;u.q=null;u.r=null;event(s,cmd.id,'UNIT_WITHDRAWN',{unitId:u.id,exitId:exit.id??null});finishActivation(s,cmd.id);assess(s,cmd.id);
-  }else if(['MOVE_UNIT','ATTACK_UNIT','RELOAD_GUN','USE_SKILL'].includes(cmd.type)){
+  }else if(['MOVE_UNIT','ATTACK_UNIT','USE_SKILL'].includes(cmd.type)){
     if(!s.activation||s.activation.side!==side||s.activation.unitId!==cmd.unitId)return error(state,'NO_OWN_ACTIVATION');
     const a=s.activation,u=byId(s,cmd.unitId);
     if(cmd.type==='MOVE_UNIT'&&a.moved)return error(state,'MOVE_ALREADY_USED');

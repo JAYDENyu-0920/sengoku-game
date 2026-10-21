@@ -3,6 +3,7 @@ import {hexDistance, getCell, seedRng, nextRng, validatePath, stepCost} from './
 import {officerModifiers} from './battle-officers.mjs';
 import {attackCardModifier} from './battle-card-effects.mjs';
 import {matchupModifier} from './battle-matchups.mjs';
+import {weatherRule,gunRangeModifier} from './battle-weather.mjs';
 export const RANGE=Object.freeze({spear:[1,1],cavalry:[1,1],bow:[2,3],gun:[2,4]});
 export const ATTACK=Object.freeze({spear:1,cavalry:1.15,bow:.9,gun:1.25});
 export const DEFENSE=Object.freeze({spear:1.15,cavalry:1,bow:.8,gun:.75});
@@ -22,8 +23,8 @@ export function validateAttack(state,attackerId,targetId){const a=state.units.fi
   if(!a||!b)return {ok:false,error:'UNKNOWN_UNIT'};
   if(a.side===b.side)return {ok:false,error:'FRIENDLY_FIRE'};
   if(a.soldiers<=0||b.soldiers<=0||a.routed||a.withdrawn||b.withdrawn)return {ok:false,error:'INACTIVE_UNIT'};
-  const d=hexDistance(a,b),range=RANGE[a.type];if(!range||d<range[0]||d>range[1])return {ok:false,error:'OUT_OF_RANGE'};
-  if(a.type==='gun'&&(a.gunState??'READY')!=='READY')return {ok:false,error:'GUN_UNLOADED'};
+  const d=hexDistance(a,b),range=a.type==='gun'?[2,weatherRule(state).gunMax]:RANGE[a.type];if(!range||d<range[0]||d>range[1])return {ok:false,error:'OUT_OF_RANGE'};
+  if(a.type==='gun'&&((a.gunReloadUntilRound??0)>0||(a.gunState??'READY')!=='READY'))return {ok:false,error:'GUN_UNLOADED'};
   if(a.type==='gun'&&a.movedThisActivation)return {ok:false,error:'GUN_MOVED'};
   if(d>1&&!lineOfSight(state.map,a,b,state.units))return {ok:false,error:'LOS_BLOCKED'};
   return {ok:true,attacker:a,target:b};
@@ -31,7 +32,7 @@ export function validateAttack(state,attackerId,targetId){const a=state.units.fi
 export function moraleState(m){return m<20?'ROUTED':m<40?'CONFUSED':m<70?'SHAKEN':'NORMAL';}
 export function createCombatBattle(snapshot){const {map,units,seed}=snapshot;if(!map||!Array.isArray(units)||units.length>16)throw Error('INVALID_SNAPSHOT');
   const seen=new Set();for(const u of units){if(!RANGE[u.type]||!Number.isInteger(u.soldiers)||u.soldiers<1||u.soldiers>500||!getCell(map,u)||seen.has(u.id))throw Error('INVALID_UNIT');seen.add(u.id);}
-  return {officers:structuredClone(snapshot.officers??{}),cardLoadouts:structuredClone(snapshot.cardLoadouts??{}),damageScale:snapshot.damageScale??1,map:structuredClone(map),units:structuredClone(units).map(u=>({...u,morale:u.morale??80,reactionUsed:false,...(u.type==='gun'?{gunState:u.gunState??'READY'}:{}),movedThisActivation:false})),rng:{combat:seedRng(`${seed}:combat`)},revision:0,events:[],committedCommands:[],pending:null,phase:'ACTIVE'};
+  return {weather:weatherRule(snapshot).name==='晴天'?'sun':snapshot.weather??'sun',officers:structuredClone(snapshot.officers??{}),cardLoadouts:structuredClone(snapshot.cardLoadouts??{}),damageScale:snapshot.damageScale??1,map:structuredClone(map),units:structuredClone(units).map(u=>({...u,morale:u.morale??80,reactionUsed:false,...(u.type==='gun'?{gunState:u.gunState??'READY',gunReloadUntilRound:u.gunReloadUntilRound??0}:{}),movedThisActivation:false})),rng:{combat:seedRng(`${seed}:combat`)},revision:0,events:[],committedCommands:[],pending:null,phase:'ACTIVE'};
 }
 function record(s,id,type,data){s.events.push({sequence:s.events.length+1,commandId:id,type,...data});}
 function resolveAttack(s,commandId,attackerId,targetId,kind='NORMAL'){
@@ -41,10 +42,10 @@ function resolveAttack(s,commandId,attackerId,targetId,kind='NORMAL'){
   // C2 neutral-baseline formula: officer, terrain, facing and tactics multipliers are integration hooks.
   const officerRatio=(s.officers?.[a.id]&&s.officers?.[b.id])?officerModifiers(s.officers[a.id],s.officers[b.id]).ratio:1;
   const cardRatio=s.cardLoadouts?.[a.side]?attackCardModifier(s.cardLoadouts[a.side],a.type):1;
-  const raw=50*(s.damageScale??1)*attack*Math.sqrt(a.soldiers/500)/defense*officerRatio*cardRatio*(1+(s.skillBonus??0))*((b.guardUntilRound??0)>=(s.round??1)? .8:1)*matchupModifier(a.type,b.type)*(.9+roll.value*.2);
+  const raw=50*(s.damageScale??1)*attack*Math.sqrt(a.soldiers/500)/defense*officerRatio*cardRatio*(1+(s.skillBonus??0))*((b.guardUntilRound??0)>=(s.round??1)? .8:1)*matchupModifier(a.type,b.type)*(a.type==='gun'?gunRangeModifier(hexDistance(a,b)):1)*(.9+roll.value*.2);
   const loss=Math.min(b.soldiers,Math.max(0,Math.floor(raw)));
   b.soldiers-=loss;b.morale=Math.max(0,b.morale-Math.floor(loss/10));b.routed=b.morale<20;
-  if(a.type==='gun')a.gunState='UNLOADED';
+  if(a.type==='gun'){a.gunState='UNLOADED';a.gunReloadUntilRound=(s.round??1)+1+weatherRule(s).reloadRounds;}
   record(s,commandId,'ATTACK_RESOLVED',{attackerId,targetId,kind,loss,remaining:b.soldiers,morale:b.morale,rngState:s.rng.combat.state});
   if(b.routed)record(s,commandId,'UNIT_ROUTED',{unitId:b.id});
   return {ok:true};
@@ -79,10 +80,7 @@ export function combatDispatch(state,cmd){
     if(mover.routed||mover.soldiers===0||Object.values(s.commanders??{}).some(cid=>{const commander=s.units.find(u=>u.id===cid);return commander&&(commander.routed||commander.soldiers<=0);})){record(s,cmd.id,'MOVE_INTERRUPTED',{unitId:mover.id});s.pending=null;}
     else result=moveUntilReaction(s,cmd.id);
   }else if(cmd.type==='ATTACK_UNIT'){s.skillBonus=cmd.skillBonus??0;result=resolveAttack(s,cmd.id,cmd.unitId,cmd.targetId);delete s.skillBonus;}
-  else if(cmd.type==='RELOAD_GUN'){
-    const u=s.units.find(u=>u.id===cmd.unitId);if(!u||u.type!=='gun'||u.gunState!=='UNLOADED')return {ok:false,error:'CANNOT_RELOAD',state};
-    u.gunState='READY';record(s,cmd.id,'GUN_RELOADED',{unitId:u.id});result={ok:true};
-  }else if(cmd.type==='MOVE_UNIT'){
+  else if(cmd.type==='RELOAD_GUN')return {ok:false,error:'AUTO_RELOAD_ENABLED',state};else if(cmd.type==='MOVE_UNIT'){
     const u=s.units.find(u=>u.id===cmd.unitId);if(!u)return {ok:false,error:'UNKNOWN_UNIT',state};
     const check=validatePath(u,cmd.path,s);if(!check.ok)return {ok:false,error:check.reason,state};
     s.pending={unitId:u.id,path:structuredClone(cmd.path),index:0,spent:0,budget:check.cost};
