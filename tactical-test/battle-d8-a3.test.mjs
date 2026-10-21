@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeMap} from './battle-core.mjs';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+const snap=()=>({map:makeMap(10,10),seed:'a3',units:[{id:'a',side:'attacker',type:'bow',q:2,r:2,soldiers:500,morale:80},{id:'b',side:'defender',type:'spear',q:4,r:2,soldiers:500,morale:80}],commanders:{attacker:'a',defender:'b'}});
+const send=(s,type,fields={})=>turnDispatch(s,{id:`a3-${s.revision}`,type,side:'attacker',expectedRevision:s.revision,...fields});
+test('2 core and 3 mobile, starting hand 1',()=>{const s=createTurnBattle(snap());assert.equal(s.cards.attacker.core.length,2);assert.equal(s.cards.attacker.mobile.length,3);assert.equal(s.cards.attacker.hand.length,1);});
+test('playing a core consumes order and enters cooldown',()=>{let s=createTurnBattle(snap());s=send(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=send(s,'PLAY_CARD',{unitId:'a',cardId:'common-1'});assert.equal(r.ok,true);assert.equal(r.state.orders.attacker,2);assert.equal(r.state.cards.attacker.core[0].uses,2);assert.equal(r.state.cards.attacker.core[0].readyRound,4);});
+test('mobile card leaves hand and goes to discard',()=>{let s=createTurnBattle(snap());s=send(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const id=s.cards.attacker.hand[0];const r=send(s,'PLAY_CARD',{unitId:'a',cardId:id});assert.equal(r.ok,true);assert.equal(r.state.cards.attacker.hand.length,0);assert.deepEqual(r.state.cards.attacker.discard,[id]);});
+test('cannot play unavailable card',()=>{let s=createTurnBattle(snap());s=send(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=send(s,'PLAY_CARD',{unitId:'a',cardId:'gun-1'});assert.equal(r.ok,false);});

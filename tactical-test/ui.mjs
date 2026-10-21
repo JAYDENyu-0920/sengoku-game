@@ -1,3 +1,5 @@
+import {CARD_POOL} from './battle-tactics.mjs';
+import {cardStatus} from './battle-d8-cards.mjs';
 import {WEATHER,weatherRule} from './battle-weather.mjs';
 import {availableSkills,SKILLS} from './battle-skills.mjs';
 import {SIZES,ROSTER,DEFENDERS,validateFormation,buildFormationSnapshot} from './battle-formation.mjs';
@@ -31,7 +33,7 @@ const AI_SIDE='defender',PLAYER_SIDE='attacker';
 const sideName=s=>s==='attacker'?'攻方':'守方';
 const unitById=id=>state.units.find(u=>u.id===id);
 function msg(s){$('help').textContent=s;}
-function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}（${matchupLabel(unitById(e.attackerId)?.type,unitById(e.targetId)?.type)}），造成 ${e.loss} 人損失`;case'DEFENSE_OPENED':return `⚠ ${n(e.unitId)} 面臨騎兵攻擊，等待槍衾決定`;case'DEFENSE_SELECTED':return `🛡 ${n(e.unitId)} 槍衾防禦成功，傷害減少 30%`;case'DEFENSE_PASSED':return `${n(e.unitId)} 未使用槍衾`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_AUTO_RELOADED':return `${n(e.unitId)} 自動裝填完成`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'SKILL_USED':return `✦ ${n(e.unitId)} 發動 ${SKILLS[e.skillId]?.name??e.skillId}（軍令 -${e.cost}）`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
+function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}（${matchupLabel(unitById(e.attackerId)?.type,unitById(e.targetId)?.type)}），造成 ${e.loss} 人損失`;case'DEFENSE_OPENED':return `⚠ ${n(e.unitId)} 面臨騎兵攻擊，等待槍衾決定`;case'DEFENSE_SELECTED':return `🛡 ${n(e.unitId)} 槍衾防禦成功，傷害減少 30%`;case'DEFENSE_PASSED':return `${n(e.unitId)} 未使用槍衾`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_AUTO_RELOADED':return `${n(e.unitId)} 自動裝填完成`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'SKILL_USED':return `✦ ${n(e.unitId)} 發動 ${SKILLS[e.skillId]?.name??e.skillId}（軍令 -${e.cost}）`;case'CARD_PLAYED':return `🃏 ${n(e.unitId)} 使用戰術卡「${e.name}」（軍令 -1）`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
 function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();showDamage(r.events);queueAi();resumeQueuedAttack();return true;}
 const xy=(q,r)=>({x:45+54*q+27*r,y:52+49*r});
 const polygon=(x,y,rad=32)=>Array.from({length:6},(_,i)=>{const a=(Math.PI/180)*(60*i-30);return `${(x+rad*Math.cos(a)).toFixed(2)},${(y+rad*Math.sin(a)).toFixed(2)}`;}).join(' ');
@@ -138,6 +140,20 @@ $('skill').onclick=()=>{
  if(!list.children.length)note('此部隊尚無可使用戰法。');
 };
 $('skillClose').onclick=()=>{$('skillDialog').hidden=true;};
+$('cards').onclick=()=>{
+ const panel=$('cardDialog'),list=$('cardChoices');list.replaceChildren();panel.hidden=false;
+ const u=unitById(selected),cards=state.cards?.attacker;
+ $('cardInfo').textContent=`核心卡 2 張（各 3 次、冷卻 2 完整輪）｜機動牌庫 ${cards?.deck.length??0}｜手牌 ${cards?.hand.length??0}/2｜軍令 ${state.orders?.attacker??0}/5`;
+ if(!u||u.side!==PLAYER_SIDE||state.phase!=='ACTIVE'||(state.activation?.side??state.nextSide)!==PLAYER_SIDE||!(state.activation?.unitId===selected||canPick(u))){const p=document.createElement('p');p.textContent='請先選擇目前可行動的我方部隊。';list.append(p);return;}
+ for(const id of [...cards.core.map(c=>c.id),...cards.hand]){
+  const def=CARD_POOL.find(c=>c.id===id),core=cards.core.find(c=>c.id===id),status=cardStatus(state,PLAYER_SIDE,id);
+  const b=document.createElement('button');b.type='button';b.disabled=!status.ok||u.cardBuffRound===state.round;
+  b.textContent=`${core?'核心':'機動'}｜${def?.name??id}｜軍令 1${core?`｜剩餘 ${core.uses} 次${state.round<core.readyRound?`｜第 ${core.readyRound} 輪可用`:''}`:''}${!status.ok?'｜'+status.error:''}`;
+  b.onclick=()=>{panel.hidden=true;if(!commitSelection())return;if(send('PLAY_CARD',{cardId:id,unitId:selected},PLAYER_SIDE))msg(`已使用「${def?.name}」，${id==='common-2'?'本輪防禦減傷 20%':'下一次攻擊增傷 15%'}。`);};list.append(b);
+ }
+};
+$('cardClose').onclick=()=>{$('cardDialog').hidden=true;};
+
 $('reload').onclick=()=>msg('鐵砲已改為自動裝填，不需要手動操作。');
 $('undo').onclick=()=>{if(preview){preview=null;mode='move';msg('已取消暫定移動，返回原位置。');render();}};
 $('end').onclick=()=>{if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵方反應，請先處理。');return;}}if(send('END_ACTIVATION')){mode=null;selected=null;preview=null;msg('等待 AI 行動，或點選尚可行動的我方部隊。');render();}};

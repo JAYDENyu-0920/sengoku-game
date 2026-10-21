@@ -1,3 +1,4 @@
+import {createCardState,drawCard,playCard} from './battle-d8-cards.mjs';
 import {reloadAtRoundStart} from './battle-weather.mjs';
 /** B1 V4.0-C3 tactical turn controller. Pure state transitions, no overworld mutations. */
 import {createCombatBattle,combatDispatch,moraleState,validateAttack} from './battle-combat.mjs';
@@ -33,7 +34,7 @@ function roundEnd(s,id){
     }
     const delta=scores.attacker-scores.defender;finish(s,id,Math.abs(delta)<1e-9?null:delta>0?'attacker':'defender','ROUND_LIMIT');s.result.scores=scores;return;
   }
-  s.round++;reloadAtRoundStart(s);for(const side of SIDES)s.orders[side]=Math.min(MAX_ORDERS,s.orders[side]+ROUND_RECOVERY);s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
+  s.round++;for(const side of SIDES)drawCard(s.cards[side]);reloadAtRoundStart(s);for(const side of SIDES)s.orders[side]=Math.min(MAX_ORDERS,s.orders[side]+ROUND_RECOVERY);s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
   s.turnOrder=[];s.nextSide=s.firstSide;event(s,id,'ROUND_STARTED',{round:s.round});
 }
 function validateSnapshot(snapshot){
@@ -44,7 +45,7 @@ function validateSnapshot(snapshot){
   if(!SIDES.includes(snapshot.firstSide??'attacker'))throw Error('INVALID_FIRST_SIDE');
   for(const o of snapshot.objectives??[])if(!o.id||!Number.isInteger(o.q)||!Number.isInteger(o.r))throw Error('INVALID_OBJECTIVE');
 }
-export function createTurnBattle(snapshot){validateSnapshot(snapshot);const s=createCombatBattle(snapshot);s.round=1;s.orders={attacker:START_ORDERS,defender:START_ORDERS};s.firstSide=snapshot.firstSide??'attacker';s.nextSide=s.firstSide;s.turnOrder=[];s.activation=null;s.commanders=clone(snapshot.commanders);s.objectives=(snapshot.objectives??[]).map(o=>({...clone(o),holder:null,lastHolder:null,streak:0}));s.retreat={attacker:{declared:false,exits:clone(snapshot.exits?.attacker??[])},defender:{declared:false,exits:clone(snapshot.exits?.defender??[])}};s.units.forEach(u=>{u.initialSoldiers=u.soldiers;u.activatedThisRound=false;u.reactionUsed=false;u.routed=u.routed??moraleState(u.morale)==='ROUTED';});return s;}
+export function createTurnBattle(snapshot){validateSnapshot(snapshot);const s=createCombatBattle(snapshot);s.round=1;s.orders={attacker:START_ORDERS,defender:START_ORDERS};s.cards={attacker:createCardState(s.units.filter(u=>u.side==='attacker')),defender:createCardState(s.units.filter(u=>u.side==='defender'))};s.firstSide=snapshot.firstSide??'attacker';s.nextSide=s.firstSide;s.turnOrder=[];s.activation=null;s.commanders=clone(snapshot.commanders);s.objectives=(snapshot.objectives??[]).map(o=>({...clone(o),holder:null,lastHolder:null,streak:0}));s.retreat={attacker:{declared:false,exits:clone(snapshot.exits?.attacker??[])},defender:{declared:false,exits:clone(snapshot.exits?.defender??[])}};s.units.forEach(u=>{u.initialSoldiers=u.soldiers;u.activatedThisRound=false;u.reactionUsed=false;u.routed=u.routed??moraleState(u.morale)==='ROUTED';});return s;}
 const error=(state,code)=>({ok:false,error:code,state});
 function finishActivation(s,id){if(!s.activation)return false;event(s,id,'ACTIVATION_ENDED',{unitId:s.activation.unitId});s.activation=null;const eligible=side=>usable(s,side).some(u=>!u.activatedThisRound);
   if(!SIDES.some(eligible)){roundEnd(s,id);return true;}
@@ -88,6 +89,11 @@ export function turnDispatch(state,cmd){
     u.activatedThisRound=true;s.activation={unitId:u.id,side,moved:false,mainUsed:false};event(s,cmd.id,'UNIT_ACTIVATED',{unitId:u.id,round:s.round});
   }else if(cmd.type==='END_ACTIVATION'){
     if(!s.activation||s.activation.side!==side)return error(state,'NO_OWN_ACTIVATION');finishActivation(s,cmd.id);
+  }else if(cmd.type==='PLAY_CARD'){
+    if(side!==s.nextSide&&s.activation?.side!==side)return error(state,'WRONG_SIDE');
+    if(s.activation&&s.activation.unitId!==cmd.unitId)return error(state,'NO_OWN_ACTIVATION');
+    const r=playCard(s,side,cmd.cardId,cmd.unitId);if(!r.ok)return error(state,r.error);
+    event(s,cmd.id,'CARD_PLAYED',{side,unitId:cmd.unitId,cardId:cmd.cardId,name:r.name});
   }else if(cmd.type==='DECLARE_RETREAT'){
     if(s.activation)return error(state,'ACTIVATION_IN_PROGRESS');if(side!==s.nextSide)return error(state,'WRONG_SIDE');if(s.retreat[side]?.declared)return error(state,'ALREADY_RETREATING');
     s.retreat[side].declared=true;event(s,cmd.id,'RETREAT_DECLARED',{side});
