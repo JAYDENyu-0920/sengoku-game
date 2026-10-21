@@ -1,6 +1,7 @@
 /** B1 V4.0-C3 tactical turn controller. Pure state transitions, no overworld mutations. */
 import {createCombatBattle,combatDispatch,moraleState} from './battle-combat.mjs';
 import {MOVEMENT,hexDistance} from './battle-core.mjs';
+import {checkSkill,START_ORDERS,MAX_ORDERS,ROUND_RECOVERY} from './battle-skills.mjs';
 const SIDES=['attacker','defender'];
 const clone=structuredClone;
 const active=u=>u.soldiers>0&&!u.routed&&!u.withdrawn;
@@ -31,7 +32,7 @@ function roundEnd(s,id){
     }
     const delta=scores.attacker-scores.defender;finish(s,id,Math.abs(delta)<1e-9?null:delta>0?'attacker':'defender','ROUND_LIMIT');s.result.scores=scores;return;
   }
-  s.round++;s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
+  s.round++;for(const side of SIDES)s.orders[side]=Math.min(MAX_ORDERS,s.orders[side]+ROUND_RECOVERY);s.units.forEach(u=>{u.activatedThisRound=false;u.reactionUsed=false;u.movedThisActivation=false;});
   s.turnOrder=[];s.nextSide=s.firstSide;event(s,id,'ROUND_STARTED',{round:s.round});
 }
 function validateSnapshot(snapshot){
@@ -42,7 +43,7 @@ function validateSnapshot(snapshot){
   if(!SIDES.includes(snapshot.firstSide??'attacker'))throw Error('INVALID_FIRST_SIDE');
   for(const o of snapshot.objectives??[])if(!o.id||!Number.isInteger(o.q)||!Number.isInteger(o.r))throw Error('INVALID_OBJECTIVE');
 }
-export function createTurnBattle(snapshot){validateSnapshot(snapshot);const s=createCombatBattle(snapshot);s.round=1;s.firstSide=snapshot.firstSide??'attacker';s.nextSide=s.firstSide;s.turnOrder=[];s.activation=null;s.commanders=clone(snapshot.commanders);s.objectives=(snapshot.objectives??[]).map(o=>({...clone(o),holder:null,lastHolder:null,streak:0}));s.retreat={attacker:{declared:false,exits:clone(snapshot.exits?.attacker??[])},defender:{declared:false,exits:clone(snapshot.exits?.defender??[])}};s.units.forEach(u=>{u.initialSoldiers=u.soldiers;u.activatedThisRound=false;u.reactionUsed=false;u.routed=u.routed??moraleState(u.morale)==='ROUTED';});return s;}
+export function createTurnBattle(snapshot){validateSnapshot(snapshot);const s=createCombatBattle(snapshot);s.round=1;s.orders={attacker:START_ORDERS,defender:START_ORDERS};s.firstSide=snapshot.firstSide??'attacker';s.nextSide=s.firstSide;s.turnOrder=[];s.activation=null;s.commanders=clone(snapshot.commanders);s.objectives=(snapshot.objectives??[]).map(o=>({...clone(o),holder:null,lastHolder:null,streak:0}));s.retreat={attacker:{declared:false,exits:clone(snapshot.exits?.attacker??[])},defender:{declared:false,exits:clone(snapshot.exits?.defender??[])}};s.units.forEach(u=>{u.initialSoldiers=u.soldiers;u.activatedThisRound=false;u.reactionUsed=false;u.routed=u.routed??moraleState(u.morale)==='ROUTED';});return s;}
 const error=(state,code)=>({ok:false,error:code,state});
 function finishActivation(s,id){if(!s.activation)return false;event(s,id,'ACTIVATION_ENDED',{unitId:s.activation.unitId});s.activation=null;const eligible=side=>usable(s,side).some(u=>!u.activatedThisRound);
   if(!SIDES.some(eligible)){roundEnd(s,id);return true;}
@@ -77,15 +78,23 @@ export function turnDispatch(state,cmd){
     if(!s.retreat[side].declared)return error(state,'RETREAT_NOT_DECLARED');
     const u=byId(s,cmd.unitId),exit=s.retreat[side].exits.find(h=>onHex(u,h));if(!exit)return error(state,'NOT_AT_EXIT');
     u.withdrawn=true;u.q=null;u.r=null;event(s,cmd.id,'UNIT_WITHDRAWN',{unitId:u.id,exitId:exit.id??null});finishActivation(s,cmd.id);assess(s,cmd.id);
-  }else if(['MOVE_UNIT','ATTACK_UNIT','RELOAD_GUN'].includes(cmd.type)){
+  }else if(['MOVE_UNIT','ATTACK_UNIT','RELOAD_GUN','USE_SKILL'].includes(cmd.type)){
     if(!s.activation||s.activation.side!==side||s.activation.unitId!==cmd.unitId)return error(state,'NO_OWN_ACTIVATION');
     const a=s.activation,u=byId(s,cmd.unitId);
     if(cmd.type==='MOVE_UNIT'&&a.moved)return error(state,'MOVE_ALREADY_USED');
-    if(cmd.type==='ATTACK_UNIT'&&a.mainUsed)return error(state,'MAIN_ALREADY_USED');
+    if(['ATTACK_UNIT','USE_SKILL'].includes(cmd.type)&&a.mainUsed)return error(state,'MAIN_ALREADY_USED');
     if(cmd.type==='RELOAD_GUN'&&(a.mainUsed||a.moved))return error(state,'MAIN_ALREADY_USED');
-    if(cmd.type==='ATTACK_UNIT'&&u.type==='gun'&&a.moved)return error(state,'GUN_MOVED');
-    const r=combatDispatch(s,cmd);if(!r.ok)return error(state,r.error);
-    const n=r.state;if(cmd.type==='MOVE_UNIT')n.activation.moved=true;else n.activation.mainUsed=true;
+    if(['ATTACK_UNIT','USE_SKILL'].includes(cmd.type)&&u.type==='gun'&&a.moved)return error(state,'GUN_MOVED');
+    let skill=null;
+    if(cmd.type==='USE_SKILL'){
+      const check=checkSkill(s,cmd);if(!check.ok)return error(state,check.error);
+      skill=check.skill;if(skill.kind==='reaction')return error(state,'REACTION_ONLY');
+      if(skill.kind==='attack'&&skill.id==='charge'&&(!a.moved||!u.movedThisActivation||!a.movedDistance||a.movedDistance<2))return error(state,'CHARGE_REQUIRES_TWO_STEPS');
+    }
+    const action=cmd.type==='USE_SKILL'?(skill.kind==='attack'?{...cmd,type:'ATTACK_UNIT',skillBonus:skill.bonus,skillId:skill.id}:{...cmd,type:'USE_GUARD',skillId:skill.id}):cmd;
+    const r=skill?.kind==='stance'?{ok:true,state:s,events:[]}:combatDispatch(s,action);if(!r.ok)return error(state,r.error);
+    const n=r.state;if(skill){n.orders[side]-=skill.cost;if(skill.kind==='stance')n.units.find(x=>x.id===u.id).guardUntilRound=n.round+1;n.events.push({sequence:n.events.length+1,commandId:cmd.id,type:'SKILL_USED',unitId:u.id,skillId:skill.id,cost:skill.cost});if(skill.kind==='stance'){n.revision++;n.committedCommands.push(cmd.id);}}
+    if(cmd.type==='MOVE_UNIT'){n.activation.moved=true;n.activation.movedDistance=(cmd.path??[]).length;}else n.activation.mainUsed=true;
     assess(n,cmd.id);return {ok:true,state:n,events:n.events.slice(state.events.length),paused:n.phase==='REACTION_PENDING'};
   }else return error(state,'UNSUPPORTED_COMMAND');
   s.revision++;s.committedCommands.push(cmd.id);return {ok:true,state:s,events:s.events.slice(state.events.length),paused:false};

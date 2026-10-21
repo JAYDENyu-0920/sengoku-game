@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeMap} from './battle-core.mjs';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+const snap=()=>({map:makeMap(10,10),seed:'a2',damageScale:2.7,units:[{id:'a',side:'attacker',type:'bow',q:2,r:2,soldiers:500,morale:80},{id:'b',side:'defender',type:'spear',q:4,r:2,soldiers:500,morale:80}],commanders:{attacker:'a',defender:'b'}});
+const dispatch=(s,type,fields={},side='attacker')=>turnDispatch(s,{id:`${type}-${s.revision}`,type,side,expectedRevision:s.revision,...fields});
+test('orders initialize 3 for both sides',()=>{const s=createTurnBattle(snap());assert.deepEqual(s.orders,{attacker:3,defender:3});});
+test('volley consumes orders, attack, and records actual damage',()=>{let s=createTurnBattle(snap());s=dispatch(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=dispatch(s,'USE_SKILL',{unitId:'a',targetId:'b',skillId:'volley'});assert.equal(r.ok,true);assert.equal(r.state.orders.attacker,1);assert.equal(r.state.activation.mainUsed,true);assert.ok(r.events.some(e=>e.type==='ATTACK_RESOLVED'&&e.loss>0));assert.ok(r.events.some(e=>e.type==='SKILL_USED'));});
+test('invalid skill cannot consume orders or action',()=>{let s=createTurnBattle(snap());s=dispatch(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=dispatch(s,'USE_SKILL',{unitId:'a',targetId:'b',skillId:'charge'});assert.equal(r.ok,false);assert.equal(s.orders.attacker,3);assert.equal(s.activation.mainUsed,false);});
+test('guard consumes one order and marks stance',()=>{let s=createTurnBattle(snap());s=dispatch(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=dispatch(s,'USE_SKILL',{unitId:'a',skillId:'guard'});assert.equal(r.ok,true);assert.equal(r.state.orders.attacker,2);assert.equal(r.state.units[0].guardUntilRound,2);});
+test('insufficient orders rejects skill',()=>{let s=createTurnBattle(snap());s.orders.attacker=1;s=dispatch(s,'ACTIVATE_UNIT',{unitId:'a'}).state;const r=dispatch(s,'USE_SKILL',{unitId:'a',targetId:'b',skillId:'volley'});assert.equal(r.ok,false);assert.equal(s.orders.attacker,1);});
