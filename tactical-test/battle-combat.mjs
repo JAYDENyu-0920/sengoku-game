@@ -2,6 +2,7 @@
 import {hexDistance, getCell, seedRng, nextRng, validatePath, stepCost} from './battle-core.mjs';
 import {officerModifiers} from './battle-officers.mjs';
 import {attackCardModifier} from './battle-card-effects.mjs';
+import {matchupModifier} from './battle-matchups.mjs';
 export const RANGE=Object.freeze({spear:[1,1],cavalry:[1,1],bow:[2,3],gun:[2,4]});
 export const ATTACK=Object.freeze({spear:1,cavalry:1.15,bow:.9,gun:1.25});
 export const DEFENSE=Object.freeze({spear:1.15,cavalry:1,bow:.8,gun:.75});
@@ -40,7 +41,7 @@ function resolveAttack(s,commandId,attackerId,targetId,kind='NORMAL'){
   // C2 neutral-baseline formula: officer, terrain, facing and tactics multipliers are integration hooks.
   const officerRatio=(s.officers?.[a.id]&&s.officers?.[b.id])?officerModifiers(s.officers[a.id],s.officers[b.id]).ratio:1;
   const cardRatio=s.cardLoadouts?.[a.side]?attackCardModifier(s.cardLoadouts[a.side],a.type):1;
-  const raw=50*(s.damageScale??1)*attack*Math.sqrt(a.soldiers/500)/defense*officerRatio*cardRatio*(.9+roll.value*.2);
+  const raw=50*(s.damageScale??1)*attack*Math.sqrt(a.soldiers/500)/defense*officerRatio*cardRatio*matchupModifier(a.type,b.type)*(.9+roll.value*.2);
   const loss=Math.min(b.soldiers,Math.max(0,Math.floor(raw)));
   b.soldiers-=loss;b.morale=Math.max(0,b.morale-Math.floor(loss/10));b.routed=b.morale<20;
   if(a.type==='gun')a.gunState='UNLOADED';
