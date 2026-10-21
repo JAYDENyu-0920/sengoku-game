@@ -6,3 +6,5 @@
 
 /* D3: distinguish available units and tentative destination */
 .unit{cursor:pointer}.status{flex-wrap:wrap}.status #remaining{color:#a6e6b9}.command-panel .controls{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:800px){.command-panel .controls{grid-template-columns:repeat(3,minmax(0,1fr))}.command-panel button{min-height:45px}}
+
+#map .unit { pointer-events:none; }
