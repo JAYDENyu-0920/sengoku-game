@@ -36,7 +36,7 @@ function roundEnd(s,id){
 }
 function validateSnapshot(snapshot){
   const sideCount=Object.fromEntries(SIDES.map(side=>[side,snapshot.units.filter(u=>u.side===side).length]));
-  if(sideCount.attacker<1||sideCount.defender<1||sideCount.attacker>4||sideCount.defender>4)throw Error('INVALID_SIDES');
+  if(sideCount.attacker<1||sideCount.defender<1||sideCount.attacker>8||sideCount.defender>8)throw Error('INVALID_SIDES');
   for(const u of snapshot.units)if(!SIDES.includes(u.side)||!u.id||!Number.isInteger(u.morale??80)||u.morale<0||u.morale>100)throw Error('INVALID_UNIT');
   const ids=new Set(snapshot.units.map(u=>u.id));for(const side of SIDES)if(!ids.has(snapshot.commanders?.[side])||snapshot.units.find(u=>u.id===snapshot.commanders[side]).side!==side)throw Error('INVALID_COMMANDER');
   if(!SIDES.includes(snapshot.firstSide??'attacker'))throw Error('INVALID_FIRST_SIDE');

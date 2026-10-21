@@ -21,3 +21,6 @@
 
 /* D7: clear mobile reaction decision window */
 .reaction-info{margin:0;color:#dce6d7;font-size:14px;line-height:1.7}.reaction-options{display:grid;gap:9px}.reaction-options button{text-align:left;padding:12px;min-height:48px}.reaction-options:empty::after{content:'目前沒有可選的我方反應部隊';color:#dce6d7}.reaction-options+.confirm-actions{grid-template-columns:1fr}.reaction-options+.confirm-actions button{min-height:48px}
+
+/* D8-A1: mobile-friendly prebattle formation dialog */
+.formation-card{max-height:min(90dvh,850px);overflow-y:auto;gap:12px;width:min(520px,100%)}.formation-field{display:grid;gap:6px;color:#e7d29d;font-size:14px}.formation-field select{width:100%;padding:12px;border-radius:8px;background:#15221a;color:#fff;border:1px solid #849579;font-size:16px}.formation-officers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.formation-officer{display:flex;align-items:center;gap:7px;background:#34483a;padding:10px 7px;border-radius:8px;font-size:12px;cursor:pointer;min-height:45px}.formation-officer input{width:19px;height:19px;accent-color:#c5a461}.formation-officer:has(input:disabled){opacity:.5}@media(max-width:400px){.formation-officers{grid-template-columns:1fr}.formation-card{padding:15px}}

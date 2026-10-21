@@ -29,7 +29,7 @@ export function validateAttack(state,attackerId,targetId){const a=state.units.fi
   return {ok:true,attacker:a,target:b};
 }
 export function moraleState(m){return m<20?'ROUTED':m<40?'CONFUSED':m<70?'SHAKEN':'NORMAL';}
-export function createCombatBattle(snapshot){const {map,units,seed}=snapshot;if(!map||!Array.isArray(units)||units.length>8)throw Error('INVALID_SNAPSHOT');
+export function createCombatBattle(snapshot){const {map,units,seed}=snapshot;if(!map||!Array.isArray(units)||units.length>16)throw Error('INVALID_SNAPSHOT');
   const seen=new Set();for(const u of units){if(!RANGE[u.type]||!Number.isInteger(u.soldiers)||u.soldiers<1||u.soldiers>500||!getCell(map,u)||seen.has(u.id))throw Error('INVALID_UNIT');seen.add(u.id);}
   return {officers:structuredClone(snapshot.officers??{}),cardLoadouts:structuredClone(snapshot.cardLoadouts??{}),damageScale:snapshot.damageScale??1,map:structuredClone(map),units:structuredClone(units).map(u=>({...u,morale:u.morale??80,reactionUsed:false,...(u.type==='gun'?{gunState:u.gunState??'READY'}:{}),movedThisActivation:false})),rng:{combat:seedRng(`${seed}:combat`)},revision:0,events:[],committedCommands:[],pending:null,phase:'ACTIVE'};
 }

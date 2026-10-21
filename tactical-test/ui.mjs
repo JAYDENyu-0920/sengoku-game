@@ -1,3 +1,4 @@
+import {SIZES,ROSTER,DEFENDERS,validateFormation,buildFormationSnapshot} from './battle-formation.mjs';
 import {makeMap,reachable,hexDistance} from './battle-core.mjs';
 import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
 import {validateAttack} from './battle-combat.mjs';
@@ -9,7 +10,7 @@ import {matchupLabel} from './battle-matchups.mjs';
 import {estimateAttack,chooseAiTarget} from './battle-d6.mjs';
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
 const labels={spear:'槍足輕',cavalry:'騎馬隊',bow:'弓足輕',gun:'鐵砲隊'};
-const names={a1:'織田信長',a2:'柴田勝家',a3:'森可成',d1:'今川義元',d2:'岡部元信',d3:'朝比奈泰朝'};
+const names=Object.fromEntries([...ROSTER,...DEFENDERS].map(o=>[o.id,o.name]));
 const unit=(id,side,type,q,r)=>({id,side,type,q,r,soldiers:500,morale:80});
 const map=makeMap(10,10);
 for(let r=0;r<10;r++)for(let q=0;q<10;q++){
@@ -20,6 +21,7 @@ for(let r=0;r<10;r++)for(let q=0;q<10;q++){
 }
 const initial={map,seed:'D2-FAST-01',damageScale:2.7,units:[unit('a1','attacker','spear',1,4),unit('a2','attacker','cavalry',1,6),unit('a3','attacker','bow',1,2),unit('d1','defender','spear',8,4),unit('d2','defender','gun',8,6),unit('d3','defender','bow',8,2)],commanders:{attacker:'a1',defender:'d1'},objectives:[{id:'central',q:5,r:4}],exits:{attacker:[{id:'west',q:0,r:4}],defender:[{id:'east',q:9,r:4}]}};
 let state,selected=null,mode=null,commandNumber=0,logLines=[],pendingTarget=null,preview=null,aiBusy=false,aiScheduled=false;
+let formation={size:'skirmish',officers:['a1','a2','a3'],commander:'a1'};
 let effects=[];
 function showDamage(events){for(const e of events??[]){if(e.type!=='ATTACK_RESOLVED')continue;const target=unitById(e.targetId);if(!target)continue;const {x,y}=xy(target.q,target.r);const svg=$('map');const t=svgEl('text',{x,y:y-27,class:'damage-float'},svg);t.textContent=`-${e.loss}`;setTimeout(()=>t.remove(),850);}}
 const AI_SIDE='defender',PLAYER_SIDE='attacker';
@@ -90,8 +92,8 @@ $('reload').onclick=()=>{if(commitSelection()&&send('RELOAD_GUN',{unitId:selecte
 $('undo').onclick=()=>{if(preview){preview=null;mode='move';msg('已取消暫定移動，返回原位置。');render();}};
 $('end').onclick=()=>{if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵方反應，請先處理。');return;}}if(send('END_ACTIVATION')){mode=null;selected=null;preview=null;msg('等待 AI 行動，或點選尚可行動的我方部隊。');render();}};
 $('pass').onclick=()=>{if(state.pending?.window){const reactUnit=state.units.find(u=>u.id===state.pending.window.candidates[0]?.unitId);if(send('PASS_REACTION',{windowId:state.pending.window.id},reactUnit?.side)){mode=null;msg('已放棄反應。');}}};
-$('reset').onclick=()=>{if(!confirm('確定重新開始示範戰役？'))return;reset();};
-function reset(){aiBusy=false;aiScheduled=false;state=createTurnBattle(initial);selected=null;mode=null;pendingTarget=null;preview=null;$('attackConfirm').hidden=true;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('點選藍色部隊自由切換，黃色格子可暫定移動；紅色由普通 AI 操作。');render();}
+$('reset').onclick=()=>{if(!confirm('確定返回戰前編制？目前戰鬥進度將清除。'))return;openFormation();};
+function reset(){aiBusy=false;aiScheduled=false;state=createTurnBattle(buildFormationSnapshot(initial,formation));selected=null;mode=null;pendingTarget=null;preview=null;$('attackConfirm').hidden=true;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('點選藍色部隊自由切換，黃色格子可暫定移動；紅色由普通 AI 操作。');render();}
 // AI plays only the red defender; one command per timer tick keeps Safari responsive.
 function queueAi(){if(aiScheduled||aiBusy||state.phase==='TACTICAL_FINISHED')return;
  const reaction=state.phase==='REACTION_PENDING';
@@ -123,4 +125,15 @@ function aiStep(){aiScheduled=false;if(state.phase==='TACTICAL_FINISHED')return;
   }
  }catch(e){msg('AI 發生錯誤：'+e.message);console.error(e);}finally{aiBusy=false;queueAi();}
 }
-reset();
+function renderFormation(){
+ const n=SIZES[formation.size],panel=$('formationOfficers');panel.replaceChildren();
+ for(const o of ROSTER){const row=document.createElement('label');row.className='formation-officer';const input=document.createElement('input');input.type='checkbox';input.checked=formation.officers.includes(o.id);input.disabled=!input.checked&&formation.officers.length>=n;input.onchange=()=>{if(input.checked)formation.officers.push(o.id);else{formation.officers=formation.officers.filter(id=>id!==o.id);if(formation.commander===o.id)formation.commander=formation.officers[0]??null;}renderFormation();};const span=document.createElement('span');span.textContent=`${o.name}｜${labels[o.type]}`;row.append(input,span);panel.append(row);}
+ const sel=$('formationCommander');sel.replaceChildren();for(const id of formation.officers){const o=ROSTER.find(x=>x.id===id);const option=document.createElement('option');option.value=id;option.textContent=o.name;sel.append(option);}sel.value=formation.commander??'';
+ const v=validateFormation(formation);$('formationStatus').textContent=v.ok?`已編制 ${n} 支部隊，總兵力 ${n*500} 人。敵軍同規模由 AI 指揮。`:v.error;
+ $('formationStart').disabled=!v.ok;
+}
+function openFormation(){aiBusy=false;aiScheduled=false;$('formationDialog').hidden=false;renderFormation();}
+$('formationSize').onchange=e=>{formation.size=e.target.value;const n=SIZES[formation.size];formation.officers=ROSTER.slice(0,n).map(o=>o.id);formation.commander=formation.officers[0];renderFormation();};
+$('formationCommander').onchange=e=>{formation.commander=e.target.value;renderFormation();};
+$('formationStart').onclick=()=>{const v=validateFormation(formation);if(!v.ok){$('formationStatus').textContent=v.error;return;}$('formationDialog').hidden=true;reset();};
+openFormation();
