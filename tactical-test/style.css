@@ -12,3 +12,9 @@
 /* D5: troop counters replace the redundant map color legend. */
 .matchup-legend{align-items:center;gap:8px 12px}.matchup-legend strong{color:#e7d29d}.matchup-legend span{color:#dce7d7}.matchup-legend span:last-child{color:#b6c6b7}
 @media(max-width:540px){.matchup-legend{justify-content:flex-start;padding:8px 12px;font-size:11px;line-height:1.5}.matchup-legend strong{width:100%}}
+
+/* D6 damage feedback */
+.damage-float{pointer-events:none;fill:#fff1bd;stroke:#522b22;stroke-width:2;paint-order:stroke;font-size:27px;font-weight:900;text-anchor:middle;animation:damage-rise .8s ease-out forwards}
+@keyframes damage-rise{from{opacity:0;transform:translateY(12px)}20%{opacity:1}to{opacity:0;transform:translateY(-28px)}}
+#attackPreview{white-space:pre-line}
+@media(prefers-reduced-motion:reduce){.damage-float{animation:none}}

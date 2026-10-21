@@ -6,6 +6,7 @@ import {planAiActivation} from './battle-ai-c7.mjs';
 import {visibleKnowledge} from './battle-autoplay.mjs';
 import {canSelectWithoutActivation} from './battle-d4.mjs';
 import {matchupLabel} from './battle-matchups.mjs';
+import {estimateAttack,chooseAiTarget} from './battle-d6.mjs';
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
 const labels={spear:'槍足輕',cavalry:'騎馬隊',bow:'弓足輕',gun:'鐵砲隊'};
 const names={a1:'織田信長',a2:'柴田勝家',a3:'森可成',d1:'今川義元',d2:'岡部元信',d3:'朝比奈泰朝'};
@@ -19,12 +20,14 @@ for(let r=0;r<10;r++)for(let q=0;q<10;q++){
 }
 const initial={map,seed:'D2-FAST-01',damageScale:2.7,units:[unit('a1','attacker','spear',1,4),unit('a2','attacker','cavalry',1,6),unit('a3','attacker','bow',1,2),unit('d1','defender','spear',8,4),unit('d2','defender','gun',8,6),unit('d3','defender','bow',8,2)],commanders:{attacker:'a1',defender:'d1'},objectives:[{id:'central',q:5,r:4}],exits:{attacker:[{id:'west',q:0,r:4}],defender:[{id:'east',q:9,r:4}]}};
 let state,selected=null,mode=null,commandNumber=0,logLines=[],pendingTarget=null,preview=null,aiBusy=false,aiScheduled=false;
+let effects=[];
+function showDamage(events){for(const e of events??[]){if(e.type!=='ATTACK_RESOLVED')continue;const target=unitById(e.targetId);if(!target)continue;const {x,y}=xy(target.q,target.r);const svg=$('map');const t=svgEl('text',{x,y:y-27,class:'damage-float'},svg);t.textContent=`-${e.loss}`;setTimeout(()=>t.remove(),850);}}
 const AI_SIDE='defender',PLAYER_SIDE='attacker';
 const sideName=s=>s==='attacker'?'攻方':'守方';
 const unitById=id=>state.units.find(u=>u.id===id);
 function msg(s){$('help').textContent=s;}
 function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}（${matchupLabel(unitById(e.attackerId)?.type,unitById(e.targetId)?.type)}），造成 ${e.loss} 人損失`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
-function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();queueAi();return true;}
+function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();showDamage(r.events);queueAi();return true;}
 const xy=(q,r)=>({x:45+54*q+27*r,y:52+49*r});
 const polygon=(x,y,rad=32)=>Array.from({length:6},(_,i)=>{const a=(Math.PI/180)*(60*i-30);return `${(x+rad*Math.cos(a)).toFixed(2)},${(y+rad*Math.sin(a)).toFixed(2)}`;}).join(' ');
 function svgEl(tag,attrs={},parent=$('map')){const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));parent.append(el);return el;}
@@ -57,7 +60,7 @@ function chooseUnit(unit){
  selected=unit.id;mode=canPick(unit)||state.activation?.unitId===unit.id&&!state.activation.moved?'move':null;
  msg(mode==='move'?'可自由切換我方部隊；點黃色格子暫定移動，確認攻擊或結束行動才鎖定。':'此部隊本輪已行動，可查看資訊。');render();
 }
-function openAttack(target){pendingTarget=target.id;$('attackPreview').textContent=`${names[selected]} 攻擊 ${names[target.id]}？（傷害依兵種、武將及士氣計算）`;$('attackConfirm').hidden=false;}
+function openAttack(target){pendingTarget=target.id;const u=unitById(selected);const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;const e=estimateAttack(probe,selected,target.id);$('attackPreview').textContent=e.ok?`${names[selected]} → ${names[target.id]}\n預估損失 ${e.min}～${e.max} 人\n敵軍預估剩餘 ${e.remainingMin}～${e.remainingMax} 人\n${e.matchup}（非保證傷害）`:`無法攻擊：${e.error}`;$('confirmAttack').disabled=!e.ok;$('attackConfirm').hidden=false;}
 function clickHex(q,r){
  if(state.phase==='TACTICAL_FINISHED'||state.phase==='REACTION_PENDING'||aiBusy||state.nextSide===AI_SIDE&&!state.activation)return;
  const unit=state.units.find(u=>u.q===q&&u.r===r&&!u.withdrawn&&u.soldiers>0),u=unitById(selected);
@@ -86,7 +89,7 @@ function aiStep(){aiScheduled=false;if(state.phase==='TACTICAL_FINISHED')return;
  try{
   if(state.phase==='REACTION_PENDING'){
    const candidates=state.pending.window.candidates;const c=candidates.find(c=>unitById(c.unitId)?.side===AI_SIDE);
-   if(c){const defender=unitById(c.unitId);const target=unitById(state.pending.window.moverId??state.activation?.unitId);
+   if(c){const target=unitById(state.pending.window.moverId??state.activation?.unitId);
     const choice=candidates.find(x=>unitById(x.unitId)?.side===AI_SIDE&&target&&validateAttack(state,x.unitId,target.id).ok);
     if(choice)send('CHOOSE_REACTION',{windowId:state.pending.window.id,unitId:choice.unitId},AI_SIDE);
     else send('PASS_REACTION',{windowId:state.pending.window.id},AI_SIDE);
@@ -96,7 +99,7 @@ function aiStep(){aiScheduled=false;if(state.phase==='TACTICAL_FINISHED')return;
    if(!a){const plan=planAiActivation(state,AI_SIDE,visibleKnowledge(state,AI_SIDE),{difficulty:'normal'});if(plan)send('ACTIVATE_UNIT',{unitId:plan.unitId},AI_SIDE);}
    else{
     const u=unitById(a.unitId),enemies=visibleKnowledge(state,AI_SIDE).visibleEnemies;
-    const target=!a.mainUsed?enemies.filter(e=>validateAttack(state,u.id,e.id).ok).sort((x,y)=>x.soldiers-y.soldiers)[0]:null;
+    const targetId=!a.mainUsed?chooseAiTarget(state,u.id,enemies.map(e=>e.id)):null;const target=targetId?unitById(targetId):null;
     if(target)send('ATTACK_UNIT',{unitId:u.id,targetId:target.id},AI_SIDE);
     else if(u.type==='gun'&&u.gunState==='UNLOADED'&&!a.mainUsed&&!a.moved)send('RELOAD_GUN',{unitId:u.id},AI_SIDE);
     else if(!a.moved&&enemies.length){const old=Math.min(...enemies.map(e=>hexDistance(u,e)));const moves=reachable(u,state).filter(m=>m.path?.length).map(m=>({...m,d:Math.min(...enemies.map(e=>hexDistance(m.hex,e)))})).filter(m=>m.d<old).sort((x,y)=>x.d-y.d||x.cost-y.cost);

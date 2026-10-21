@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {makeMap} from './battle-core.mjs';import {createTurnBattle} from './battle-turns.mjs';
+import {estimateAttack,chooseAiTarget} from './battle-d6.mjs';
+const mk=(units,commanders={attacker:'a',defender:'b'})=>createTurnBattle({map:makeMap(10,10),seed:'D6-test',damageScale:2.7,units,commanders});
+const u=(id,side,type,q,r,soldiers=500)=>({id,side,type,q,r,soldiers,morale:80});
+test('estimate valid attack yields positive bounded loss',()=>{const s=mk([u('a','attacker','spear',2,2),u('b','defender','cavalry',3,2)]);const e=estimateAttack(s,'a','b');assert.equal(e.ok,true);assert.ok(e.min>0&&e.max>=e.min);assert.equal(e.remainingMin,500-e.max)});
+test('estimate cannot attack out of range',()=>{const s=mk([u('a','attacker','spear',1,1),u('b','defender','cavalry',7,7)]);assert.equal(estimateAttack(s,'a','b').ok,false)});
+test('estimate does not mutate battle RNG',()=>{const s=mk([u('a','attacker','spear',2,2),u('b','defender','cavalry',3,2)]);const before=JSON.stringify(s);estimateAttack(s,'a','b');assert.equal(JSON.stringify(s),before)});
+test('finishing blow preferred',()=>{const s=mk([u('a','attacker','spear',2,2),u('b','defender','spear',3,2,500),u('c','defender','cavalry',2,3,20)]);assert.equal(chooseAiTarget(s,'a',['b','c']),'c')});
+test('hidden target excluded',()=>{const s=mk([u('a','attacker','spear',2,2),u('b','defender','spear',3,2),u('c','defender','cavalry',2,3,20)]);assert.equal(chooseAiTarget(s,'a',['b']),'b')});
+test('AI no legal visible target returns null',()=>{const s=mk([u('a','attacker','spear',1,1),u('b','defender','spear',7,7)]);assert.equal(chooseAiTarget(s,'a',['b']),null)});
