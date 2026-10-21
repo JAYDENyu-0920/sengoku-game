@@ -71,7 +71,7 @@ function clickHex(q,r){
 }
 $('attack').onclick=()=>{mode='attack';msg('點選可攻擊的敵軍，確認後才會造成傷害。');render();};
 $('confirmCancel').onclick=()=>{$('attackConfirm').hidden=true;pendingTarget=null;};
-$('confirmAttack').onclick=()=>{const targetId=pendingTarget;$('attackConfirm').hidden=true;pendingTarget=null;if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵軍反應，請先處理反應，再重新選擇攻擊。');return;}}if(targetId&&send('ATTACK_UNIT',{unitId:selected,targetId})){mode=null;msg('攻擊已結算，位置已鎖定。');render();}};
+$('confirmAttack').onclick=()=>{const targetId=pendingTarget;$('attackConfirm').hidden=true;pendingTarget=null;if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵軍反應，請先處理反應，再重新選擇攻擊。');return;}}if(targetId){mode=null;if(send('ATTACK_UNIT',{unitId:selected,targetId})){msg('攻擊已結算，位置已鎖定。');/* send() 已重新繪製並加上傷害飄字；不可再 render() 清除特效 */}}};
 $('reload').onclick=()=>{if(commitSelection()&&send('RELOAD_GUN',{unitId:selected}))msg('鐵砲已裝填，請結束部隊行動。');};
 $('undo').onclick=()=>{if(preview){preview=null;mode='move';msg('已取消暫定移動，返回原位置。');render();}};
 $('end').onclick=()=>{if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵方反應，請先處理。');return;}}if(send('END_ACTIVATION')){mode=null;selected=null;preview=null;msg('等待 AI 行動，或點選尚可行動的我方部隊。');render();}};

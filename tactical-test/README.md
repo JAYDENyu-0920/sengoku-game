@@ -7,3 +7,7 @@
 部署：解壓縮後把檔案上傳至 GitHub `sengoku-game/tactical-test/`，覆蓋同名檔案。不要覆蓋根目錄的 `index.html`。
 
 測試：`node --test *.test.mjs`。
+
+
+## D6.1 玩家傷害飄字修正
+玩家確認攻擊後，`send()` 會先重繪地圖並建立傷害飄字；原先事件處理器又呼叫 `render()`，使 SVG 飄字立即被清空。D6.1 移除這次重複重繪，保留 AI 攻擊的原有流程與傷害公式。
