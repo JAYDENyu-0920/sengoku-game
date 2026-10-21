@@ -61,7 +61,7 @@ function render(){const svg=$('map');svg.replaceChildren();$('round').textConten
  $('unitInfo').innerHTML=u?`<div class="unit-title">${names[u.id]} · ${labels[u.type]}</div><div>${sideName(u.side)}｜兵力 ${u.soldiers}/500｜士氣 ${u.morale}</div><div class="muted">座標 ${u.q},${u.r}｜${preview?.unitId===u.id?'暫定移動，可反悔':u.routed?'潰走':u.activatedThisRound?'本輪已啟動':'待命'}${u.type==='gun'?`｜鐵砲 ${u.gunState==='UNLOADED'?'未裝填':'已裝填'}`:''}</div>`:'點選任一部隊查看資訊';
  $('log').replaceChildren(...logLines.slice(0,24).map(t=>{const e=document.createElement('div');e.textContent=t;return e;}));
  const own=u?.side===(active?.side??state.nextSide),valid=state.phase==='ACTIVE';
- $('undo').disabled=!preview; $('skill').disabled=!valid||!u||u.side!==PLAYER_SIDE||!(active?.unitId===selected||canPick(u))||!!active?.mainUsed; $('attack').disabled=!valid||!(active?.unitId===selected||canPick(u))||!targetsFor(u).length;
+ $('undo').disabled=!preview; $('skill').disabled=false; $('skill').textContent=u?.side===PLAYER_SIDE?'武將戰法 · '+(names[u.id]||'已選部隊'):'武將戰法 · 點此查看'; $('attack').disabled=!valid||!(active?.unitId===selected||canPick(u))||!targetsFor(u).length;
  $('reload').disabled=!valid||!active||active.unitId!==selected||active.mainUsed||active.moved||!!preview||u?.type!=='gun'||u.gunState!=='UNLOADED';
  $('end').disabled=!valid||!(active?.side===PLAYER_SIDE||canPick(u));
  $('pass').hidden=true; // D7: reaction is handled by a dedicated dialog.
@@ -89,11 +89,30 @@ function clickHex(q,r){
 $('attack').onclick=()=>{selectedSkill=null;mode='attack';msg('點選可攻擊的敵軍，確認後才會造成傷害。');render();};
 $('confirmCancel').onclick=()=>{$('attackConfirm').hidden=true;pendingTarget=null;selectedSkill=null;};
 $('confirmAttack').onclick=()=>{const targetId=pendingTarget;$('attackConfirm').hidden=true;pendingTarget=null;if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵軍反應，請先處理反應，再重新選擇攻擊。');return;}}if(targetId){mode=null;if(send(selectedSkill?'USE_SKILL':'ATTACK_UNIT',{unitId:selected,targetId,...(selectedSkill?{skillId:selectedSkill}:{})})){selectedSkill=null;msg('攻擊已結算，位置已鎖定。');/* send() 已重新繪製並加上傷害飄字；不可再 render() 清除特效 */}}};
-$('skill').onclick=()=>{const u=unitById(selected);if(!u)return;const panel=$('skillDialog'),list=$('skillChoices');list.replaceChildren();for(const skill of availableSkills(u)){
- const b=document.createElement('button');b.type='button';b.textContent=`${skill.name}｜軍令 ${skill.cost}｜${skill.kind==='attack'?'攻擊':skill.kind==='stance'?'防禦姿態':'反應戰法'}`;
- const noOrders=(state.orders?.attacker??0)<skill.cost;b.disabled=noOrders||skill.kind==='reaction'||skill.id==='charge'&&(!state.activation?.moved||state.activation?.movedDistance<2);
- b.onclick=()=>{panel.hidden=true;if(skill.kind==='stance'){if(!commitSelection())return;if(send('USE_SKILL',{unitId:selected,skillId:skill.id})){msg('堅守已發動，受到攻擊傷害降低 20%。');}}else{selectedSkill=skill.id;mode='attack';msg(`已選 ${skill.name}，請點選敵方目標；確認前不消耗軍令。`);render();}};list.append(b);
- }panel.hidden=false;};
+$('skill').onclick=()=>{
+ const u=unitById(selected),panel=$('skillDialog'),list=$('skillChoices');list.replaceChildren();
+ const info=$('skillInfo');
+ const note=(text)=>{const p=document.createElement('p');p.className='reaction-info';p.textContent=text;list.append(p);};
+ panel.hidden=false;
+ if(!u){info.textContent='尚未選擇部隊';note('請先關閉視窗，點選戰場上的藍色我方部隊，再按「武將戰法」。');return;}
+ info.textContent=`${names[u.id]||u.id}｜${labels[u.type]}｜軍令 ${state.orders?.attacker??0}/5`;
+ if(u.side!==PLAYER_SIDE){note('這是敵軍部隊。請選擇藍色我方部隊。');return;}
+ if(state.phase==='REACTION_PENDING'){note('反應事件尚未結束，請先處理反應視窗。');return;}
+ if(state.phase!=='ACTIVE'||(state.activation?.side??state.nextSide)!==PLAYER_SIDE){note('目前不是我方可行動階段。');return;}
+ if(!(state.activation?.unitId===selected||canPick(u))){note('此部隊目前無法使用戰法：可能已行動或已選定其他部隊。');return;}
+ if(state.activation?.mainUsed){note('此部隊本次主要行動已使用，請先結束部隊行動。');return;}
+ for(const skill of availableSkills(u)){
+  const b=document.createElement('button');b.type='button';
+  const noOrders=(state.orders?.attacker??0)<skill.cost;
+  const unavailable=skill.kind==='reaction'||skill.id==='charge'&&(!state.activation?.moved||state.activation?.movedDistance<2);
+  const reason=skill.kind==='reaction'?'（反應戰法將於後續版本開放）':skill.id==='charge'&&unavailable?'（需先正式移動至少 2 格）':noOrders?'（軍令不足）':'';
+  b.textContent=`${skill.name}｜軍令 ${skill.cost}｜${skill.kind==='attack'?'攻擊':skill.kind==='stance'?'防禦姿態':'反應戰法'}${reason}`;
+  b.disabled=noOrders||unavailable;
+  b.onclick=()=>{panel.hidden=true;if(skill.kind==='stance'){if(!commitSelection())return;if(send('USE_SKILL',{unitId:selected,skillId:skill.id})){msg('堅守已發動，受到攻擊傷害降低 20%。');}}else{selectedSkill=skill.id;mode='attack';msg(`已選 ${skill.name}，請點選敵方目標；確認前不消耗軍令。`);render();}};
+  list.append(b);
+ }
+ if(!list.children.length)note('此部隊尚無可使用戰法。');
+};
 $('skillClose').onclick=()=>{$('skillDialog').hidden=true;};
 $('reload').onclick=()=>{if(commitSelection()&&send('RELOAD_GUN',{unitId:selected}))msg('鐵砲已裝填，請結束部隊行動。');};
 $('undo').onclick=()=>{if(preview){preview=null;mode='move';msg('已取消暫定移動，返回原位置。');render();}};
