@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeMap} from './battle-core.mjs';
+import {createTurnBattle,turnDispatch} from './battle-turns.mjs';
+import {canSelectWithoutActivation,switchTentativeSelection} from './battle-d4.mjs';
+import {visibleKnowledge} from './battle-autoplay.mjs';
+import {planAiActivation} from './battle-ai-c7.mjs';
+const setup=()=>createTurnBattle({map:makeMap(10,10),seed:'D4',units:[{id:'a',side:'attacker',type:'spear',q:1,r:1,soldiers:500,morale:80},{id:'b',side:'attacker',type:'bow',q:1,r:3,soldiers:500,morale:80},{id:'d',side:'defender',type:'spear',q:8,r:8,soldiers:500,morale:80}],commanders:{attacker:'a',defender:'d'}});
+test('both friendly units are selectable without activation',()=>{const s=setup();assert.ok(canSelectWithoutActivation(s,'a'));assert.ok(canSelectWithoutActivation(s,'b'));assert.equal(s.activation,null);});
+test('switch clears tentative move without changing engine state',()=>{const s=setup(),copy=structuredClone(s);const r=switchTentativeSelection(s,{unitId:'a',q:2,r:1},'b');assert.equal(r.selected,'b');assert.equal(r.preview,null);assert.deepEqual(s,copy);});
+test('enemy cannot be selected for player activation',()=>{assert.equal(canSelectWithoutActivation(setup(),'d'),false);});
+test('cannot switch once activation committed',()=>{let s=setup();s=turnDispatch(s,{id:'1',side:'attacker',type:'ACTIVATE_UNIT',unitId:'a',expectedRevision:s.revision}).state;assert.equal(canSelectWithoutActivation(s,'b'),false);});
+test('AI activation planner selects defender on defender turn',()=>{let s=setup();s=turnDispatch(s,{id:'1',side:'attacker',type:'ACTIVATE_UNIT',unitId:'a',expectedRevision:s.revision}).state;s=turnDispatch(s,{id:'2',side:'attacker',type:'END_ACTIVATION',expectedRevision:s.revision}).state;const plan=planAiActivation(s,'defender',visibleKnowledge(s,'defender'),{difficulty:'normal'});assert.equal(plan.unitId,'d');});
