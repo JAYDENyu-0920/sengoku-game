@@ -13,3 +13,6 @@
 
 
 D8-A2.4: Cavalry attacks against spear units now pause before damage for a 1-order phalanx (-30%) or pass decision. AI uses the defense if affordable.
+
+
+D8-A2.5 修正：預覽移動後鐵砲射擊判定、反應後自動續接已確認的攻擊、潰走部隊點擊遮擋、AI 無計畫時的後備啟動。

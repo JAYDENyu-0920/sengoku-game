@@ -25,14 +25,14 @@ const initial={map,seed:'D2-FAST-01',damageScale:2.7,units:[unit('a1','attacker'
 let state,selected=null,mode=null,commandNumber=0,logLines=[],pendingTarget=null,preview=null,aiBusy=false,aiScheduled=false;
 let chosenWeather='sun';
 let formation={size:'skirmish',officers:['a1','a2','a3'],commander:'a1'};
-let effects=[];let selectedSkill=null;
+let effects=[];let selectedSkill=null;let queuedAttack=null;
 function showDamage(events){for(const e of events??[]){if(e.type!=='ATTACK_RESOLVED')continue;const target=unitById(e.targetId);if(!target)continue;const {x,y}=xy(target.q,target.r);const svg=$('map');const t=svgEl('text',{x,y:y-27,class:'damage-float'},svg);t.textContent=`-${e.loss}`;setTimeout(()=>t.remove(),850);}}
 const AI_SIDE='defender',PLAYER_SIDE='attacker';
 const sideName=s=>s==='attacker'?'攻方':'守方';
 const unitById=id=>state.units.find(u=>u.id===id);
 function msg(s){$('help').textContent=s;}
-function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}（${matchupLabel(unitById(e.attackerId)?.type,unitById(e.targetId)?.type)}），造成 ${e.loss} 人損失`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_AUTO_RELOADED':return `${n(e.unitId)} 自動裝填完成`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'SKILL_USED':return `✦ ${n(e.unitId)} 發動 ${SKILLS[e.skillId]?.name??e.skillId}（軍令 -${e.cost}）`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
-function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();showDamage(r.events);queueAi();return true;}
+function eventText(e){const n=id=>names[id]||id;switch(e.type){case'UNIT_ACTIVATED':return `⚑ ${n(e.unitId)} 開始行動`;case'UNIT_STEP':return `${n(e.unitId)} 移動至 (${e.to.q},${e.to.r})`;case'ATTACK_RESOLVED':return `⚔ ${n(e.attackerId)} 攻擊 ${n(e.targetId)}（${matchupLabel(unitById(e.attackerId)?.type,unitById(e.targetId)?.type)}），造成 ${e.loss} 人損失`;case'DEFENSE_OPENED':return `⚠ ${n(e.unitId)} 面臨騎兵攻擊，等待槍衾決定`;case'DEFENSE_SELECTED':return `🛡 ${n(e.unitId)} 槍衾防禦成功，傷害減少 30%`;case'DEFENSE_PASSED':return `${n(e.unitId)} 未使用槍衾`;case'REACTION_OPENED':return '⚠ 敵方反應窗口開啟';case'REACTION_PASSED':return '反應已放棄';case'REACTION_SELECTED':return `${n(e.unitId)} 發動反應`;case'GUN_AUTO_RELOADED':return `${n(e.unitId)} 自動裝填完成`;case'GUN_RELOADED':return `${n(e.unitId)} 裝填完成`;case'ACTIVATION_ENDED':return `${n(e.unitId)} 結束行動`;case'SKILL_USED':return `✦ ${n(e.unitId)} 發動 ${SKILLS[e.skillId]?.name??e.skillId}（軍令 -${e.cost}）`;case'ROUND_STARTED':return `第 ${e.round} 輪開始`;case'BATTLE_FINISHED':return `戰鬥結束：${e.reason}`;default:return null;}}
+function send(type,fields={},side=state.activation?.side??state.nextSide){const cmd={id:`D1-${++commandNumber}`,type,side,expectedRevision:state.revision,...fields};const r=turnDispatch(state,cmd);if(!r.ok){msg(`無法執行：${r.error}`);return false;}state=r.state;for(const e of r.events??[]){const line=eventText(e);if(line)logLines.unshift(line);}if(logLines.length>70)logLines.length=70;if(state.phase==='TACTICAL_FINISHED')msg(`戰鬥結束：${state.result?.winner?sideName(state.result.winner)+'獲勝':'平手'}（${state.result?.reason}）`);render();showDamage(r.events);queueAi();resumeQueuedAttack();return true;}
 const xy=(q,r)=>({x:45+54*q+27*r,y:52+49*r});
 const polygon=(x,y,rad=32)=>Array.from({length:6},(_,i)=>{const a=(Math.PI/180)*(60*i-30);return `${(x+rad*Math.cos(a)).toFixed(2)},${(y+rad*Math.sin(a)).toFixed(2)}`;}).join(' ');
 function svgEl(tag,attrs={},parent=$('map')){const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));parent.append(el);return el;}
@@ -40,7 +40,18 @@ function virtualActivation(u){return state.activation?state:{...state,activation
 function canPick(u){return !!u&&canSelectWithoutActivation(state,u.id,PLAYER_SIDE);}
 function reachableFor(u){return u&&state.phase==='ACTIVE'&&((state.activation?.unitId===u.id&&!state.activation.moved&&!state.activation.mainUsed)||canPick(u))?reachable(u,state):[];}
 function commitSelection(){if(!state.activation&&selected&&canPick(unitById(selected)))return send('ACTIVATE_UNIT',{unitId:selected},PLAYER_SIDE);return state.activation?.unitId===selected;}
-function targetsFor(u){if(!u||state.phase!=='ACTIVE'||!(state.activation?.unitId===u.id&&!state.activation.mainUsed||canPick(u)))return [];const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;return probe.units.filter(t=>t.side!==u.side&&validateAttack(probe,u.id,t.id).ok);}
+function targetsFor(u){if(!u||state.phase!=='ACTIVE'||!(state.activation?.unitId===u.id&&!state.activation.mainUsed||canPick(u)))return [];const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?{...previewPosition(state,preview,u.id),movedThisActivation:true}:v)}:state;return probe.units.filter(t=>t.side!==u.side&&validateAttack(probe,u.id,t.id).ok);}
+function resumeQueuedAttack(){
+ if(!queuedAttack||state.phase!=='ACTIVE')return;
+ const job=queuedAttack;
+ if(!state.activation||state.activation.unitId!==job.unitId||state.activation.side!==PLAYER_SIDE||state.activation.mainUsed){queuedAttack=null;return;}
+ // Wait for any subsequent reaction windows to resolve; never repeat the confirmation dialog.
+ queuedAttack=null;
+ const action=job.skillId?'USE_SKILL':'ATTACK_UNIT';
+ if(send(action,{unitId:job.unitId,targetId:job.targetId,...(job.skillId?{skillId:job.skillId}:{})},PLAYER_SIDE)){
+  selectedSkill=null;mode=null;msg('移動反應處理完畢，已自動完成原本確認的攻擊。');
+ }else msg('移動後無法完成預定攻擊（可能已被反擊擊退、射線受阻或目標失效），請重新選擇。');
+}
 function playerDefense(){return state.phase==='DEFENSE_PENDING'&&state.defensePending?.defenderSide===PLAYER_SIDE;}
 function playerReaction(){return state.phase==='REACTION_PENDING'&&state.pending?.window?.candidates?.some(c=>unitById(c.unitId)?.side===PLAYER_SIDE);}
 function renderDefense(){
@@ -74,7 +85,7 @@ function render(){const svg=$('map');svg.replaceChildren();$('round').textConten
  $('unitInfo').innerHTML=u?`<div class="unit-title">${names[u.id]} · ${labels[u.type]}</div><div>${sideName(u.side)}｜兵力 ${u.soldiers}/500｜士氣 ${u.morale}</div><div class="muted">座標 ${u.q},${u.r}｜${preview?.unitId===u.id?'暫定移動，可反悔':u.routed?'潰走':u.activatedThisRound?'本輪已啟動':'待命'}${u.type==='gun'?`｜鐵砲 ${u.gunReloadUntilRound>0?`自動裝填中（第 ${u.gunReloadUntilRound} 輪可射擊）`:'已裝填'}`:''}</div>`:'點選任一部隊查看資訊';
  $('log').replaceChildren(...logLines.slice(0,24).map(t=>{const e=document.createElement('div');e.textContent=t;return e;}));
  const own=u?.side===(active?.side??state.nextSide),valid=state.phase==='ACTIVE';
- $('undo').disabled=!preview; $('skill').disabled=false; $('skill').textContent=u?.side===PLAYER_SIDE?'武將戰法 · '+(names[u.id]||'已選部隊'):'武將戰法 · 點此查看'; $('attack').disabled=!valid||!(active?.unitId===selected||canPick(u))||!targetsFor(u).length;
+ $('undo').disabled=!preview; $('skill').disabled=false; $('skill').textContent=u?.side===PLAYER_SIDE?'武將戰法 · '+(names[u.id]||'已選部隊'):'武將戰法 · 點此查看'; $('attack').disabled=!valid||!(active?.unitId===selected||canPick(u))||!targetsFor(u).length; $('attack').title=u?.type==='gun'&&preview?'鐵砲移動後無法射擊；請取消暫定移動':'沒有可攻擊的目標時，請檢查射程、射線及裝填狀態';
  $('reload').hidden=true;
  $('end').disabled=!valid||!(active?.side===PLAYER_SIDE||canPick(u));
  $('pass').hidden=true; // D7: reaction is handled by a dedicated dialog.
@@ -90,18 +101,18 @@ function chooseUnit(unit){selectedSkill=null;
  selected=unit.id;mode=canPick(unit)||state.activation?.unitId===unit.id&&!state.activation.moved?'move':null;
  msg(mode==='move'?'可自由切換我方部隊；點黃色格子暫定移動，確認攻擊或結束行動才鎖定。':'此部隊本輪已行動，可查看資訊。');render();
 }
-function openAttack(target){pendingTarget=target.id;const u=unitById(selected);const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;const e=estimateAttack(probe,selected,target.id);$('attackPreview').textContent=e.ok?`${names[selected]} → ${names[target.id]}\n預估損失 ${Math.floor(e.min*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))}～${Math.floor(e.max*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))} 人\n敵軍剩餘兵力依戰法加成重新結算\n${e.matchup}（非保證傷害）${selectedSkill?'\n戰法：'+SKILLS[selectedSkill].name+'｜軍令 -'+SKILLS[selectedSkill].cost:''}`:`無法攻擊：${e.error}`;$('confirmAttack').disabled=!e.ok;$('attackConfirm').hidden=false;}
+function openAttack(target){pendingTarget=target.id;const u=unitById(selected);const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?{...previewPosition(state,preview,u.id),movedThisActivation:true}:v)}:state;const e=estimateAttack(probe,selected,target.id);$('attackPreview').textContent=e.ok?`${names[selected]} → ${names[target.id]}\n預估損失 ${Math.floor(e.min*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))}～${Math.floor(e.max*(1+(selectedSkill?SKILLS[selectedSkill].bonus??0:0)))} 人\n敵軍剩餘兵力依戰法加成重新結算\n${e.matchup}（非保證傷害）${selectedSkill?'\n戰法：'+SKILLS[selectedSkill].name+'｜軍令 -'+SKILLS[selectedSkill].cost:''}`:`無法攻擊：${e.error}`;$('confirmAttack').disabled=!e.ok;$('attackConfirm').hidden=false;}
 function clickHex(q,r){
- if(state.phase==='TACTICAL_FINISHED'||state.phase==='REACTION_PENDING'||state.phase==='DEFENSE_PENDING'||aiBusy||state.nextSide===AI_SIDE&&!state.activation)return;
- const unit=state.units.find(u=>u.q===q&&u.r===r&&!u.withdrawn&&u.soldiers>0),u=unitById(selected);
+ if(state.phase==='TACTICAL_FINISHED'||state.phase==='REACTION_PENDING'||state.phase==='DEFENSE_PENDING'||aiBusy||state.activation?.side===AI_SIDE||state.nextSide===AI_SIDE&&!state.activation)return;
+ const unit=state.units.find(u=>u.q===q&&u.r===r&&!u.withdrawn&&!u.routed&&u.soldiers>0),u=unitById(selected);
  if(mode==='move'&&u){const entry=reachableFor(u).find(v=>v.hex.q===q&&v.hex.r===r);if(entry){preview=stageMove(virtualActivation(u),selected,entry);msg('暫定移動：可再點其他格子，或按「取消移動」。攻擊或結束行動時才提交。');render();return;}}
  if(unit&&u&&unit.side!==u.side&&(state.activation?.unitId===u.id||canPick(u))&&targetsFor(u).some(t=>t.id===unit.id)){openAttack(unit);return;}
  if(unit){if(state.activation&&unit.side===state.activation.side&&unit.id!==state.activation.unitId){msg('已提交行動，請先結束目前部隊的行動。');return;}chooseUnit(unit);return;}
  mode=(state.activation?.unitId===selected&&!state.activation.moved||canPick(unitById(selected)))?'move':null;render();
 }
-$('attack').onclick=()=>{selectedSkill=null;mode='attack';msg('點選可攻擊的敵軍，確認後才會造成傷害。');render();};
+$('attack').onclick=()=>{if($('attack').disabled)return;selectedSkill=null;mode='attack';msg('點選可攻擊的敵軍，確認後才會造成傷害。');render();};
 $('confirmCancel').onclick=()=>{$('attackConfirm').hidden=true;pendingTarget=null;selectedSkill=null;};
-$('confirmAttack').onclick=()=>{const targetId=pendingTarget;$('attackConfirm').hidden=true;pendingTarget=null;if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵軍反應，請先處理反應，再重新選擇攻擊。');return;}}if(targetId){mode=null;if(send(selectedSkill?'USE_SKILL':'ATTACK_UNIT',{unitId:selected,targetId,...(selectedSkill?{skillId:selectedSkill}:{})})){selectedSkill=null;msg('攻擊已結算，位置已鎖定。');/* send() 已重新繪製並加上傷害飄字；不可再 render() 清除特效 */}}};
+$('confirmAttack').onclick=()=>{const targetId=pendingTarget;$('attackConfirm').hidden=true;pendingTarget=null;if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){queuedAttack={unitId:selected,targetId,skillId:selectedSkill};msg('已保留攻擊指令，敵方反應結束後會自動攻擊，無須再次確認。');return;}}if(targetId){mode=null;if(send(selectedSkill?'USE_SKILL':'ATTACK_UNIT',{unitId:selected,targetId,...(selectedSkill?{skillId:selectedSkill}:{})})){selectedSkill=null;msg('攻擊已結算，位置已鎖定。');/* send() 已重新繪製並加上傷害飄字；不可再 render() 清除特效 */}}};
 $('skill').onclick=()=>{
  const u=unitById(selected),panel=$('skillDialog'),list=$('skillChoices');list.replaceChildren();
  const info=$('skillInfo');
@@ -132,7 +143,7 @@ $('undo').onclick=()=>{if(preview){preview=null;mode='move';msg('已取消暫定
 $('end').onclick=()=>{if(!commitSelection())return;if(preview){const p=preview;preview=null;if(!send('MOVE_UNIT',{unitId:selected,path:p.path}))return;if(state.phase==='REACTION_PENDING'){msg('移動觸發敵方反應，請先處理。');return;}}if(send('END_ACTIVATION')){mode=null;selected=null;preview=null;msg('等待 AI 行動，或點選尚可行動的我方部隊。');render();}};
 $('pass').onclick=()=>{if(state.pending?.window){const reactUnit=state.units.find(u=>u.id===state.pending.window.candidates[0]?.unitId);if(send('PASS_REACTION',{windowId:state.pending.window.id},reactUnit?.side)){mode=null;msg('已放棄反應。');}}};
 $('reset').onclick=()=>{if(!confirm('確定返回戰前編制？目前戰鬥進度將清除。'))return;openFormation();};
-function reset(){chosenWeather=$('weatherSelect')?.value??'sun';selectedSkill=null;aiBusy=false;aiScheduled=false;state=createTurnBattle({...buildFormationSnapshot(initial,formation),weather:chosenWeather});selected=null;mode=null;pendingTarget=null;preview=null;$('attackConfirm').hidden=true;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('點選藍色部隊自由切換，黃色格子可暫定移動；紅色由普通 AI 操作。');render();}
+function reset(){chosenWeather=$('weatherSelect')?.value??'sun';selectedSkill=null;queuedAttack=null;aiBusy=false;aiScheduled=false;state=createTurnBattle({...buildFormationSnapshot(initial,formation),weather:chosenWeather});selected=null;mode=null;pendingTarget=null;preview=null;$('attackConfirm').hidden=true;commandNumber=0;logLines=['試玩場景已載入。請選擇藍色攻方部隊。'];msg('點選藍色部隊自由切換，黃色格子可暫定移動；紅色由普通 AI 操作。');render();}
 // AI plays only the red defender; one command per timer tick keeps Safari responsive.
 function queueAi(){if(aiScheduled||aiBusy||state.phase==='TACTICAL_FINISHED')return;
  if(state.phase==='DEFENSE_PENDING'){if(state.defensePending.defenderSide===AI_SIDE){aiScheduled=true;setTimeout(aiStep,220);}return;}
@@ -153,7 +164,7 @@ function aiStep(){aiScheduled=false;if(state.phase==='TACTICAL_FINISHED')return;
    }
   }else if((state.activation?.side??state.nextSide)===AI_SIDE){
    const a=state.activation;
-   if(!a){const plan=planAiActivation(state,AI_SIDE,visibleKnowledge(state,AI_SIDE),{difficulty:'normal'});if(plan)send('ACTIVATE_UNIT',{unitId:plan.unitId},AI_SIDE);}
+   if(!a){const plan=planAiActivation(state,AI_SIDE,visibleKnowledge(state,AI_SIDE),{difficulty:'normal'});if(plan)send('ACTIVATE_UNIT',{unitId:plan.unitId},AI_SIDE);else{const fallback=remainingUnits(state,AI_SIDE)[0];if(fallback)send('ACTIVATE_UNIT',{unitId:fallback},AI_SIDE);else msg('AI 無可行動部隊，請重新開始戰鬥。');}}
    else{
     const u=unitById(a.unitId),enemies=visibleKnowledge(state,AI_SIDE).visibleEnemies;
     const targetId=!a.mainUsed?chooseAiTarget(state,u.id,enemies.map(e=>e.id)):null;const target=targetId?unitById(targetId):null;
