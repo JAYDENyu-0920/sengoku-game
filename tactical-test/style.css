@@ -27,3 +27,10 @@
 
 /* D8-A3.2 planning, order preview and attack overlays */
 #orders{position:sticky;left:0;background:#405b43;border:1px solid #b7d6a8;border-radius:8px;padding:5px 9px;color:#fff1bc;font-size:14px}.plan-info{white-space:pre-line;background:#334737;color:#eaf2db;padding:9px;border-radius:8px;font-size:12px;line-height:1.6;margin:7px 0}.range-selector{display:flex;align-items:center;gap:10px;color:#e5d39f;font-size:13px;margin:8px 0}.range-selector select{flex:1;background:#15231c;border:1px solid #b99d66;border-radius:8px;color:#fff;padding:9px;font-size:14px}.ability-detail{white-space:pre-line;background:#35493c;padding:12px;border-radius:9px;line-height:1.8;color:#fff3ce}.hex.target{stroke:#ff7777;stroke-width:4;fill-opacity:.83}.confirm-card{max-height:90dvh;overflow:auto}
+
+/* D8-A3.2.1: yellow move cells, red valid attack cells; full-board responsive fit. */
+#map .hex.reachable{fill:#d8b85e;stroke:#f7dc7e;stroke-width:2.5}
+#map .hex.target{fill:#c86b64;stroke:#f7a5a0;stroke-width:3}
+#map .hex.reachable.target{fill:#d8b85e;stroke:#e64d4d;stroke-width:5}
+#map{height:auto;min-height:0;max-height:none;aspect-ratio:auto}
+@media(max-width:800px){#map{min-height:0;max-height:none;height:auto}}

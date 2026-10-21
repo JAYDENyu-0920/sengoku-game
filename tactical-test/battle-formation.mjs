@@ -12,8 +12,13 @@ export const DEFENDERS=Object.freeze([
  {id:'d5',name:'松井宗信',type:'spear'}, {id:'d6',name:'井伊直盛',type:'bow'},
  {id:'d7',name:'瀬名氏俊',type:'cavalry'}, {id:'d8',name:'関口氏純',type:'gun'}
 ]);
-const slotsA=[[1,4],[1,6],[1,2],[2,8],[2,0],[0,7],[0,1],[2,5]];
-const slotsD=[[8,4],[8,6],[8,2],[7,8],[7,0],[9,7],[9,1],[7,5]];
+// Coordinate sets are sized for each battle scale; the full board remains visible.
+export const BOARD_SIZES=Object.freeze({skirmish:8,field:10,grand:12});
+function deploymentSlots(size,side){
+ const width=BOARD_SIZES[size],count=SIZES[size];
+ const rows=count===3?[2,4,6]:count===5?[1,3,5,7,8]:[1,2,3,4,6,7,8,10];
+ return rows.map((r,i)=>[side==='attacker'?(i%3===2?1:0):width-1-(i%3===2?1:0),r]);
+}
 export function validateFormation(formation){
  const size=SIZES[formation?.size];if(!size)return {ok:false,error:'不支援的戰役規模'};
  const ids=formation?.officers;if(!Array.isArray(ids)||ids.length!==size||new Set(ids).size!==size)return {ok:false,error:`必須配置 ${size} 名不重複武將`};
@@ -24,7 +29,10 @@ export function validateFormation(formation){
 export function buildFormationSnapshot(base,formation){
  const valid=validateFormation(formation);if(!valid.ok)throw Error(valid.error);
  const size=SIZES[formation.size];const make=(officer,side,index,slots)=>({id:officer.id,side,type:officer.type,q:slots[index][0],r:slots[index][1],soldiers:500,morale:80});
- const attacker=formation.officers.map((id,i)=>make(ROSTER.find(o=>o.id===id),'attacker',i,slotsA));
- const defender=DEFENDERS.slice(0,size).map((o,i)=>make(o,'defender',i,slotsD));
- return {...base,seed:`D8-A1-${formation.size}`,units:[...attacker,...defender],commanders:{attacker:formation.commander,defender:defender[0].id}};
+ const attacker=formation.officers.map((id,i)=>make(ROSTER.find(o=>o.id===id),'attacker',i,deploymentSlots(formation.size,'attacker')));
+ const defender=DEFENDERS.slice(0,size).map((o,i)=>make(o,'defender',i,deploymentSlots(formation.size,'defender')));
+ const width=BOARD_SIZES[formation.size];
+ const map=structuredClone(base.map);map.width=width;map.height=width;const cells={};for(let r=0;r<width;r++)for(let q=0;q<width;q++)cells[`${q},${r}`]=structuredClone(base.map.cells[`${q},${r}`]??{terrain:'plain',elevation:0});map.cells=cells;
+ const middle=Math.floor(width/2);
+ return {...base,map,objectives:[{id:'central',q:middle,r:middle}],exits:{attacker:[{id:'west',q:0,r:middle}],defender:[{id:'east',q:width-1,r:middle}]},seed:`D8-A1-${formation.size}`,units:[...attacker,...defender],commanders:{attacker:formation.commander,defender:defender[0].id}};
 }
