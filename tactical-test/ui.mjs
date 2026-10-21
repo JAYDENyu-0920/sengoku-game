@@ -36,6 +36,19 @@ function canPick(u){return !!u&&canSelectWithoutActivation(state,u.id,PLAYER_SID
 function reachableFor(u){return u&&state.phase==='ACTIVE'&&((state.activation?.unitId===u.id&&!state.activation.moved&&!state.activation.mainUsed)||canPick(u))?reachable(u,state):[];}
 function commitSelection(){if(!state.activation&&selected&&canPick(unitById(selected)))return send('ACTIVATE_UNIT',{unitId:selected},PLAYER_SIDE);return state.activation?.unitId===selected;}
 function targetsFor(u){if(!u||state.phase!=='ACTIVE'||!(state.activation?.unitId===u.id&&!state.activation.mainUsed||canPick(u)))return [];const probe=preview?{...state,units:state.units.map(v=>v.id===u.id?previewPosition(state,preview,u.id):v)}:state;return probe.units.filter(t=>t.side!==u.side&&validateAttack(probe,u.id,t.id).ok);}
+function playerReaction(){return state.phase==='REACTION_PENDING'&&state.pending?.window?.candidates?.some(c=>unitById(c.unitId)?.side===PLAYER_SIDE);}
+function renderReaction(){
+ const dialog=$('reactionDialog');if(!playerReaction()){dialog.hidden=true;return;}
+ const win=state.pending.window,mover=unitById(state.pending.unitId);dialog.hidden=false;
+ $('reactionInfo').textContent=`${names[mover?.id]||'敵軍'} 正在移動，請選擇一支我方部隊攔截，或放棄此次反應。每支部隊每輪最多反應一次。`;
+ const list=$('reactionCandidates');list.replaceChildren();
+ for(const c of win.candidates){const actor=unitById(c.unitId);if(actor?.side!==PLAYER_SIDE)continue;
+  const button=document.createElement('button');button.type='button';button.textContent=`⚔ ${names[actor.id]||actor.id}（${labels[actor.type]||actor.type}）發動反應攻擊`;
+  button.onclick=()=>{if(!playerReaction())return;const windowId=state.pending.window.id;if(send('CHOOSE_REACTION',{windowId,unitId:actor.id},PLAYER_SIDE)){preview=null;mode=null;msg('反應攻擊已結算，敵軍將繼續行動。');}};
+  list.append(button);
+ }
+}
+$('reactionPass').onclick=()=>{if(!playerReaction())return;const windowId=state.pending.window.id;if(send('PASS_REACTION',{windowId},PLAYER_SIDE)){preview=null;mode=null;msg('已放棄本次反應，保留未使用部隊的反應機會。');}};
 function render(){const svg=$('map');svg.replaceChildren();$('round').textContent=`第 ${state.round} 輪`;const active=state.activation;$('turn').textContent=active?`${sideName(active.side)} · ${names[active.unitId]}`:`${sideName(state.nextSide)}待命`;$('remaining').textContent=`${sideName(active?.side??state.nextSide)}尚可行動 ${remainingUnits(state).length} 隊`; $('phase').textContent=state.phase==='REACTION_PENDING'?'⚠ 反應待決':state.phase==='TACTICAL_FINISHED'?'戰鬥結束':'戰鬥中';
  const u=unitById(selected),reach=mode==='move'?reachableFor(u):[],targets=mode==='attack'?targetsFor(u):[];
  const rkeys=new Set(reach.map(h=>`${h.hex.q},${h.hex.r}`)),tkeys=new Set(targets.map(t=>`${t.q},${t.r}`));
@@ -48,7 +61,8 @@ function render(){const svg=$('map');svg.replaceChildren();$('round').textConten
  $('undo').disabled=!preview; $('attack').disabled=!valid||!(active?.unitId===selected||canPick(u))||!targetsFor(u).length;
  $('reload').disabled=!valid||!active||active.unitId!==selected||active.mainUsed||active.moved||!!preview||u?.type!=='gun'||u.gunState!=='UNLOADED';
  $('end').disabled=!valid||!(active?.side===PLAYER_SIDE||canPick(u));
- $('pass').disabled=state.phase!=='REACTION_PENDING'||state.pending?.window?.candidates?.[0]&&unitById(state.pending.window.candidates[0].unitId)?.side!==PLAYER_SIDE;
+ $('pass').hidden=true; // D7: reaction is handled by a dedicated dialog.
+ renderReaction();
  $('attack').classList.toggle('active',mode==='attack');
 }
 function chooseUnit(unit){

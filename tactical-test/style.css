@@ -18,3 +18,6 @@
 @keyframes damage-rise{from{opacity:0;transform:translateY(12px)}20%{opacity:1}to{opacity:0;transform:translateY(-28px)}}
 #attackPreview{white-space:pre-line}
 @media(prefers-reduced-motion:reduce){.damage-float{animation:none}}
+
+/* D7: clear mobile reaction decision window */
+.reaction-info{margin:0;color:#dce6d7;font-size:14px;line-height:1.7}.reaction-options{display:grid;gap:9px}.reaction-options button{text-align:left;padding:12px;min-height:48px}.reaction-options:empty::after{content:'目前沒有可選的我方反應部隊';color:#dce6d7}.reaction-options+.confirm-actions{grid-template-columns:1fr}.reaction-options+.confirm-actions button{min-height:48px}
